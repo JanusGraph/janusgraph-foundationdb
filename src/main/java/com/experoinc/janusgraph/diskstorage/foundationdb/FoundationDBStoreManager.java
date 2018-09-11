@@ -113,7 +113,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
             final Transaction tx = db.createTransaction();
 
             final StoreTransaction fdbTx = serializable ?
-                new SerializableFoundationDBTx(db, tx, txCfg) : new ReadCommittedFoundationDBTx(db, tx, txCfg);
+                new FoundationDBTx(db, tx, txCfg) : new ReadCommittedFoundationDBTx(db, tx, txCfg);
 
             if (log.isTraceEnabled()) {
                 log.trace("FoundationDB tx created", new TransactionBegin(fdbTx.toString()));
@@ -237,7 +237,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
     }
 
     private String determineRootDirectoryName(Configuration config) {
-        if ((!config.has(DIRECTORY) && (config.has(GRAPH_NAME)))) return config.get(GRAPH_NAME);
+        if (!config.has(DIRECTORY) && (config.has(GRAPH_NAME))) return config.get(GRAPH_NAME);
         return config.get(DIRECTORY);
     }
 

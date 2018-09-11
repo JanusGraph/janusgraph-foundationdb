@@ -6,6 +6,7 @@
 
 JanusGraph, coupled with the FoundationDB storage adapter provides the following unique features:
 
+* High availability
 * ACID transactions
 
 # Limitations
@@ -13,18 +14,23 @@ JanusGraph, coupled with the FoundationDB storage adapter provides the following
 # Compatibility Matrix
 
 |FDB Storage Adapter|JanusGraph|FoundationDB|
-|------------------:|---------:|-----------:|
-|0.1.0              |     0.3.0|       5.2.5|
+|-:|-:|-:|
+|0.1.0|0.3.0|5.2.5|
 
-# Getting started from a release
+# Getting started
 
+## Installing from a binary release
 Binary releases can be found on [GitHub](http://github.com/experoinc/janusgraph-foundationdb/releases).
 
-# Getting started from source
+1. Download the JanusGraph [release](https://github.com/JanusGraph/janusgraph/releases) that is compatible up with the FoundationDB storage adapter.
+2. Download the desired FoundationDB storage adapter release.
+3. Unzip the storage adapter zip and copy the contents of the `lib` directory into your JanusGraph `ext` directory.
+4. Copy the `janusgraph-foundationdb.properties` file into your JanusGraph `conf` directory.
+
+## Installing from source
 
 1. Clone the repository from GitHub.
     `git clone http://github.com/experoinc/janusgraph-foundationdb`
-
 # Configuration Options
 
 |Property|Description|Default|

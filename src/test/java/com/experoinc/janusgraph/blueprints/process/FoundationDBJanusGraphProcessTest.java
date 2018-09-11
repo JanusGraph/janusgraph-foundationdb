@@ -26,7 +26,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
-@RunWith(ProcessStandardSuite.class)
+@RunWith(FoundationDBProcessStandardSuite.class)
 @GraphProviderClass(provider = FoundationDBGraphProvider.class, graph = JanusGraph.class)
 public class FoundationDBJanusGraphProcessTest {
 

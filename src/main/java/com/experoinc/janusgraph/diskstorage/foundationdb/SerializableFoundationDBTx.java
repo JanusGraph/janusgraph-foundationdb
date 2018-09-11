@@ -45,6 +45,12 @@ public class SerializableFoundationDBTx extends AbstractStoreTransaction {
         return tx;
     }
 
+    public synchronized  void restart() throws BackendException {
+//        tx.commit();
+        tx.close();
+        tx = db.createTransaction();
+    }
+
 
     @Override
     public synchronized void rollback() throws BackendException {

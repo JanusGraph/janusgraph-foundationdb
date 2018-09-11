@@ -31,14 +31,18 @@ import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConf
  */
 public class FoundationDBStorageSetup extends StorageSetup {
 
+
     public static ModifiableConfiguration getFoundationDBConfiguration() {
+        return getFoundationDBConfiguration("janusgraph-test-fdb");
+    }
+
+    public static ModifiableConfiguration getFoundationDBConfiguration(final String graphName) {
         return buildGraphConfiguration()
-                .set(STORAGE_BACKEND,"foundationdb")
-                .set(DIRECTORY, "janusgraph-test-fdb")
+                .set(STORAGE_BACKEND,"com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBStoreManager")
+                .set(DIRECTORY, graphName)
                 .set(DROP_ON_CLEAR, false)
                 .set(CLUSTER_FILE_PATH, "src/test/resources/etc/fdb.cluster")
-                .set(SERIALIZABLE, true)
-                .set(STORAGE_BATCH, true);
+                .set(SERIALIZABLE, true);
     }
 
     public static WriteConfiguration getFoundationDBGraphConfiguration() {

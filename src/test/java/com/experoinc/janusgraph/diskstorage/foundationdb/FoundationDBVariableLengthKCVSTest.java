@@ -36,7 +36,8 @@ public class FoundationDBVariableLengthKCVSTest extends KeyColumnValueStoreTest 
         return new OrderedKeyValueStoreManagerAdapter(sm);
     }
 
-    @Test @Override
+    @Test
+    @Override
     public void testConcurrentGetSlice() {
 
     }

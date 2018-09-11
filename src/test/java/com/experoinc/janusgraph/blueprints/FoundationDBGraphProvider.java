@@ -25,6 +25,7 @@ public class FoundationDBGraphProvider extends AbstractJanusGraphProvider {
 
     @Override
     public ModifiableConfiguration getJanusGraphConfiguration(String graphName, Class<?> test, String testMethodName) {
-        return FoundationDBStorageSetup.getFoundationDBConfiguration();
+        if (graphName != null) return FoundationDBStorageSetup.getFoundationDBConfiguration(graphName);
+        else return FoundationDBStorageSetup.getFoundationDBConfiguration();
     }
 }
