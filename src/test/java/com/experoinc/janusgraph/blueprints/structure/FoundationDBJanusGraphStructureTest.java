@@ -1,4 +1,4 @@
-// Copyright 2017 JanusGraph Authors
+// Copyright 2018 Expero Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.experoinc.janusgraph.blueprints.process;
+package com.experoinc.janusgraph.blueprints.structure;
 
 import com.palantir.docker.compose.DockerComposeRule;
 import com.experoinc.janusgraph.FoundationDBStorageSetup;
@@ -24,7 +24,7 @@ import org.junit.ClassRule;
 import org.junit.runner.RunWith;
 
 /**
- * @author Matthias Broecheler (me@matthiasb.com)
+ * @author Ted Wilmes (twilmes@gmail.com)
  */
 @RunWith(StructureStandardSuite.class)
 @GraphProviderClass(provider = FoundationDBGraphProvider.class, graph = JanusGraph.class)
