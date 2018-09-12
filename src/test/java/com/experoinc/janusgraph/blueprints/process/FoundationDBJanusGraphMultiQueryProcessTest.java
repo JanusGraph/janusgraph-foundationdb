@@ -2,7 +2,6 @@ package com.experoinc.janusgraph.blueprints.process;
 
 import com.palantir.docker.compose.DockerComposeRule;
 import org.apache.tinkerpop.gremlin.GraphProviderClass;
-import org.apache.tinkerpop.gremlin.process.ProcessStandardSuite;
 import com.experoinc.janusgraph.FoundationDBStorageSetup;
 import com.experoinc.janusgraph.blueprints.FoundationDBMultiQueryGraphProvider;
 import org.janusgraph.core.JanusGraph;

@@ -43,7 +43,7 @@ import java.util.concurrent.ExecutionException;
 
 import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.CLUSTER_FILE_PATH;
 import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.DIRECTORY;
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.SERIALIZABLE;
+import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.ISOLATION_LEVEL;
 import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.VERSION;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.GRAPH_NAME;
 
@@ -63,7 +63,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
     protected final StoreFeatures features;
     protected DirectorySubspace rootDirectory;
     protected final String rootDirectoryName;
-    protected final boolean serializable;
+    protected final FoundationDBTx.IsolationLevel isolationLevel;
 
     public FoundationDBStoreManager(Configuration configuration) throws BackendException {
         super(configuration);
@@ -73,7 +73,20 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
         rootDirectoryName = determineRootDirectoryName(configuration);
         db = !"default".equals(configuration.get(CLUSTER_FILE_PATH)) ?
             fdb.open(configuration.get(CLUSTER_FILE_PATH)) : fdb.open();
-        serializable = configuration.get(SERIALIZABLE);
+        final String isolationLevelStr = configuration.get(ISOLATION_LEVEL);
+        switch (isolationLevelStr.toLowerCase().trim()) {
+            case "serializable":
+                isolationLevel = FoundationDBTx.IsolationLevel.SERIALIZABLE;
+                break;
+            case "read_committed_no_write":
+                isolationLevel = FoundationDBTx.IsolationLevel.READ_COMMITTED_NO_WRITE;
+                break;
+            case "read_committed_with_write":
+                isolationLevel = FoundationDBTx.IsolationLevel.READ_COMMITTED_WITH_WRITE;
+                break;
+            default:
+                throw new PermanentBackendException("Unrecognized isolation level " + isolationLevelStr);
+        }
         initialize(rootDirectoryName);
 
         features = new StandardStoreFeatures.Builder()
@@ -112,8 +125,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
         try {
             final Transaction tx = db.createTransaction();
 
-            final StoreTransaction fdbTx = serializable ?
-                new FoundationDBTx(db, tx, txCfg) : new ReadCommittedFoundationDBTx(db, tx, txCfg);
+            final StoreTransaction fdbTx = new FoundationDBTx(db, tx, txCfg, isolationLevel);
 
             if (log.isTraceEnabled()) {
                 log.trace("FoundationDB tx created", new TransactionBegin(fdbTx.toString()));

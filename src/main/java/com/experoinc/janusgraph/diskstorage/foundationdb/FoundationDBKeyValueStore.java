@@ -15,8 +15,6 @@
 package com.experoinc.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.KeyValue;
-import com.apple.foundationdb.Range;
-import com.apple.foundationdb.Transaction;
 import com.apple.foundationdb.directory.DirectorySubspace;
 import com.google.common.base.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
@@ -33,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;

@@ -17,7 +17,6 @@ package com.experoinc.janusgraph.diskstorage.foundationdb;
 import com.experoinc.janusgraph.FoundationDBStorageSetup;
 import com.google.common.collect.ImmutableMap;
 import com.palantir.docker.compose.DockerComposeRule;
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.KeyColumnValueStoreTest;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;

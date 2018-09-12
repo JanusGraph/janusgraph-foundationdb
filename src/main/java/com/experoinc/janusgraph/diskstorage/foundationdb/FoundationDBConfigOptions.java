@@ -54,12 +54,12 @@ public interface FoundationDBConfigOptions {
         ConfigOption.Type.LOCAL,
         "default");
 
-    ConfigOption<Boolean> SERIALIZABLE = new ConfigOption<>(
+    ConfigOption<String> ISOLATION_LEVEL = new ConfigOption<>(
         FDB_NS,
-        "serializable",
-        "If true",
+        "isolation-level",
+        "Options are serializable, read_committed_no_write, read_committed_with_write",
         ConfigOption.Type.LOCAL,
-        true);
+        "serializable");
 
 
 }

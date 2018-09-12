@@ -15,13 +15,12 @@
 package com.experoinc.janusgraph.blueprints;
 
 import com.experoinc.janusgraph.FoundationDBStorageSetup;
+import com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBTx;
 import org.janusgraph.blueprints.AbstractJanusGraphComputerProvider;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
 import org.apache.tinkerpop.gremlin.GraphProvider;
-
-import com.experoinc.janusgraph.diskstorage.foundationdb.SerializableFoundationDBTx;
 
 import java.time.Duration;
 import java.util.Set;
@@ -44,7 +43,7 @@ public class FoundationDBGraphComputerProvider extends AbstractJanusGraphCompute
     @Override
     public Set<Class> getImplementations() {
         final Set<Class> implementations = super.getImplementations();
-        implementations.add(SerializableFoundationDBTx.class);
+        implementations.add(FoundationDBTx.class);
         return implementations;
     }
 

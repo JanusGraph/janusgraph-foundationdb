@@ -20,11 +20,11 @@ import org.janusgraph.StorageSetup;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 
+import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.ISOLATION_LEVEL;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
 import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.CLUSTER_FILE_PATH;
 import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.DIRECTORY;
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.SERIALIZABLE;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
@@ -42,7 +42,7 @@ public class FoundationDBStorageSetup extends StorageSetup {
                 .set(DIRECTORY, graphName)
                 .set(DROP_ON_CLEAR, false)
                 .set(CLUSTER_FILE_PATH, "src/test/resources/etc/fdb.cluster")
-                .set(SERIALIZABLE, true);
+                .set(ISOLATION_LEVEL, "read_committed_with_write");
     }
 
     public static WriteConfiguration getFoundationDBGraphConfiguration() {

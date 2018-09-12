@@ -15,7 +15,6 @@
 package com.experoinc.janusgraph.diskstorage.foundationdb;
 
 import com.palantir.docker.compose.DockerComposeRule;
-import com.palantir.docker.compose.connection.waiting.HealthChecks;
 import com.experoinc.janusgraph.FoundationDBStorageSetup;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;

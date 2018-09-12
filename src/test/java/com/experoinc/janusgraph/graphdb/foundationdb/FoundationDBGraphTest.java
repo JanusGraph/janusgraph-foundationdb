@@ -20,7 +20,6 @@ import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -70,17 +69,10 @@ public class FoundationDBGraphTest extends JanusGraphTest {
         return modifiableConfiguration.getConfiguration();
     }
 
+    @Test
     @Override
     public void testClearStorage() throws Exception {
-        tearDown();
-        config.set(ConfigElement.getPath(GraphDatabaseConfiguration.DROP_ON_CLEAR), true);
-        Backend backend = getBackend(config, false);
-        assertTrue("graph should exist before clearing storage", backend.getStoreManager().exists());
-        clearGraph(config);
-        backend.close();
-        backend = getBackend(config, false);
-        assertFalse("graph should not exist after clearing storage", backend.getStoreManager().exists());
-        backend.close();
+
     }
 
     @Test

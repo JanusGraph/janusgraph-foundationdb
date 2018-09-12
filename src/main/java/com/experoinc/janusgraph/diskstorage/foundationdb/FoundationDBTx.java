@@ -1,6 +1,7 @@
 package com.experoinc.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.Database;
+import com.apple.foundationdb.FDBException;
 import com.apple.foundationdb.KeyValue;
 import com.apple.foundationdb.Range;
 import com.apple.foundationdb.Transaction;
@@ -12,10 +13,13 @@ import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,41 +29,53 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FoundationDBTx extends AbstractStoreTransaction {
 
 
-    private static final Logger log = LoggerFactory.getLogger(SerializableFoundationDBTx.class);
+    private static final Logger log = LoggerFactory.getLogger(FoundationDBTx.class);
 
     private volatile Transaction tx;
 
     private final Database db;
 
-    private List<Mutation> inserts = new LinkedList<>();
+    private List<Insert> inserts = new LinkedList<>();
     private List<byte[]> deletions = new LinkedList<>();
 
-    private final AtomicInteger txCount = new AtomicInteger(0);
+    private int maxRuns = 1;
 
-    public FoundationDBTx(Database db, Transaction t, BaseTransactionConfig config) {
+    public enum IsolationLevel { SERIALIZABLE, READ_COMMITTED_NO_WRITE, READ_COMMITTED_WITH_WRITE }
+
+    private final IsolationLevel isolationLevel;
+
+    private AtomicInteger txId = new AtomicInteger(0);
+
+    public FoundationDBTx(Database db, Transaction t, BaseTransactionConfig config, IsolationLevel isolationLevel) {
         super(config);
         tx = t;
         this.db = db;
+        this.isolationLevel = isolationLevel;
+
+        switch (isolationLevel) {
+            case SERIALIZABLE:
+                // no retries
+                break;
+            case READ_COMMITTED_NO_WRITE:
+            case READ_COMMITTED_WITH_WRITE:
+                maxRuns = 3;
+        }
     }
 
-    public Transaction getTransaction() {
-        return tx;
-    }
+    private Object resetLock = new Object();
 
-    public synchronized  void restart() throws PermanentBackendException {
+    public synchronized void restart() {
+        txId.incrementAndGet();
         if (tx == null) return;
+        tx.cancel();
         tx.close();
-        log.info("Restarting transaction");
         tx = db.createTransaction();
-        txCount.incrementAndGet();
-        // reapply mutations but do not clear them out just in case this transaction also
-        // times out and they need to be reapplied
-        for (Mutation mutation : inserts) {
-            tx.set(mutation.getKey(), mutation.getValue());
-        }
-        for (byte[] delete : deletions) {
-            tx.clear(delete);
-        }
+        // Reapply mutations but do not clear them out just in case this transaction also
+        // times out and they need to be reapplied.
+        //
+        // @todo Note that at this point, the too large transaction case (tx exceeds 10,000,000 bytes) is not handled.
+        inserts.forEach(insert -> tx.set(insert.getKey(), insert.getValue()));
+        deletions.forEach(delete -> tx.clear(delete));
     }
 
     @Override
@@ -74,25 +90,47 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             tx = null;
         } catch (Exception e) {
             throw new PermanentBackendException(e);
+        } finally {
+            if (tx != null)
+                tx.close();
         }
     }
 
     @Override
     public synchronized void commit() throws BackendException {
-        super.commit();
-        if (tx == null) return;
-        if (log.isTraceEnabled())
-            log.trace("{} committed", this.toString(), new FoundationDBTx.TransactionClose(this.toString()));
+        boolean failing = true;
+        for (int i = 0; i < maxRuns; i++) {
+            super.commit();
+            if (tx == null) return;
+            if (log.isTraceEnabled())
+                log.trace("{} committed", this.toString(), new FoundationDBTx.TransactionClose(this.toString()));
 
-        try {
-            tx.commit().get();
-            tx.close();
-            tx = null;
-        } catch (ExecutionException e) {
-            restart();
-            commit();
-        }catch (Exception e) {
-            throw new PermanentBackendException(e);
+            try {
+                if (!inserts.isEmpty() || !deletions.isEmpty()) {
+                    tx.commit().get();
+                } else {
+                    // nothing to commit so skip it
+                    tx.cancel();
+                }
+                tx.close();
+                tx = null;
+                failing = false;
+                break;
+            } catch (ExecutionException e) {
+                if (isolationLevel.equals(IsolationLevel.READ_COMMITTED_NO_WRITE)) {
+                    break;
+                }
+                restart();
+            } catch (Exception e) {
+                throw new PermanentBackendException(e);
+            } finally {
+                if (tx != null) {
+                    tx.close();
+                }
+            }
+        }
+        if (failing) {
+            throw new PermanentBackendException("Max transaction reset count exceeded");
         }
     }
 
@@ -111,72 +149,112 @@ public class FoundationDBTx extends AbstractStoreTransaction {
     }
 
     public byte[] get(final byte[] key) throws PermanentBackendException {
-        try {
-            return this.tx.get(key).get();
-        } catch (ExecutionException e) {
-            this.restart();
-            return get(key);
-        } catch (Exception e) {
-            throw new PermanentBackendException(e);
+        boolean failing = true;
+        byte[] value = null;
+        for (int i = 0; i < maxRuns; i++) {
+            try {
+                value = this.tx.get(key).get();
+                failing = false;
+                break;
+            } catch (ExecutionException e) {
+                this.restart();
+            } catch (Exception e) {
+                throw new PermanentBackendException(e);
+            }
         }
+        if (failing) {
+            throw new PermanentBackendException("Max transaction reset count exceeded");
+        }
+        return value;
     }
 
     public List<KeyValue> getRange(final byte[] startKey, final byte[] endKey,
                                             final int limit) throws PermanentBackendException {
-        try {
-            return tx.getRange(new Range(startKey, endKey), limit).asList().get();
-        } catch (ExecutionException e) {
-            this.restart();
-            return getRange(startKey, endKey, limit);
-        } catch (Exception e) {
-            throw new PermanentBackendException(e);
-        }
-    }
-
-    public Map<KVQuery, List<KeyValue>> getMultiRange(List<Object[]> queries) throws PermanentBackendException {
-        Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
-        List<Object[]> retries = new LinkedList<>();
-        for(Object[] obj : queries) {
-            final KVQuery query = (KVQuery) obj[0];
-            final byte[] start = (byte[]) obj[1];
-            final byte[] end = (byte[]) obj[2];
+        boolean failing = true;
+        List<KeyValue> result = Collections.emptyList();
+        for (int i = 0; i < maxRuns; i++) {
+            final int startTxId = txId.get();
             try {
-                final List<KeyValue> result = tx.getRange(start, end, query.getLimit()).asList()
-                        .whenComplete((res, th) -> {
-                            if (th != null) {
-                                retries.add(new Object[]{query, start, end});
-                            } else {
-                                resultMap.put(query, res);
-                            }
-                        }).join();
-                resultMap.put(query, result);
+                result = tx.getRange(new Range(startKey, endKey), limit).asList().get();
+                if (result == null) return Collections.emptyList();
+                failing = false;
+                break;
+            } catch (ExecutionException e) {
+                if (txId.get() == startTxId)
+                    this.restart();
             } catch (Exception e) {
                 throw new PermanentBackendException(e);
             }
-            if (!retries.isEmpty()) {
-                final Map<KVQuery, List<KeyValue>> retryResults = getMultiRange(retries);
-                retryResults.entrySet().forEach(entry -> resultMap.put(entry.getKey(), entry.getValue()));
+        }
+        if (failing) {
+            throw new PermanentBackendException("Max transaction reset count exceeded");
+        }
+        return result;
+    }
+
+    public synchronized  Map<KVQuery, List<KeyValue>> getMultiRange(final List<Object[]> queries)
+            throws PermanentBackendException {
+        Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
+        List<Object[]> retries = new CopyOnWriteArrayList<>(queries);
+        List<CompletableFuture> futures = new LinkedList<>();
+        for (int i = 0; i < (maxRuns * 5); i++) {
+            for(Object[] obj : retries) {
+                final KVQuery query = (KVQuery) obj[0];
+                final byte[] start = (byte[]) obj[1];
+                final byte[] end = (byte[]) obj[2];
+
+                final int startTxId = txId.get();
+                try {
+                    futures.add(tx.getRange(start, end, query.getLimit()).asList()
+                            .whenComplete((res, th) -> {
+                                if (th == null) {
+                                    retries.remove(query);
+                                    if (res == null) {
+                                        res = Collections.emptyList();
+                                    }
+                                    resultMap.put(query, res);
+                                } else {
+                                    if (startTxId == txId.get())
+                                        this.restart();
+                                }
+                            }));
+                } catch (IllegalStateException fdbe) {
+                    // retry on IllegalStateException thrown when tx state changes prior to getRange call
+                }
             }
         }
+        for (final CompletableFuture future : futures) {
+            try {
+                future.get();
+            } catch (ExecutionException ee) {
+                // some tasks will fail due to tx time limits being exceeded
+            } catch (IllegalStateException is) {
+                // illegal state can arise from tx being closed while tx is inflight
+                // todo find way to clean this up and prevent this state from occurring
+            } catch (Exception e) {
+                throw new PermanentBackendException(e);
+            }
+        }
+
         return resultMap;
     }
 
-    public void set(final byte[] key, final byte[] value) throws PermanentBackendException {
-        inserts.add(new Mutation(key, value));
+    public void set(final byte[] key, final byte[] value) {
+        inserts.add(new Insert(key, value));
         tx.set(key, value);
     }
 
-    public void clear(final byte[] key) throws PermanentBackendException {
+    public void clear(final byte[] key) {
         deletions.add(key);
         tx.clear(key);
     }
 
 
-    private class Mutation {
+    private class Insert {
         private byte[] key;
         private byte[] value;
 
-        public Mutation(final byte[] key, final byte[] value) {
+        public Insert(final byte[] key, final byte[] value) {
             this.key = key;
             this.value = value;
         }

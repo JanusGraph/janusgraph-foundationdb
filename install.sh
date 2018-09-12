@@ -21,6 +21,7 @@ if [ -z "$*" ]; then
 fi
 
 JANUS_INSTALL_PATH=$1
+JANUS_BIN_PATH=${JANUS_INSTALL_PATH}/bin
 JANUS_CONF_PATH=${JANUS_INSTALL_PATH}/conf
 JANUS_GREMLIN_SERVER_CONF=${JANUS_CONF_PATH}/gremlin-server
 
@@ -36,3 +37,6 @@ cp conf/janusgraph-foundationdb-es-server.properties ${JANUS_GREMLIN_SERVER_CONF
 # backup Gremlin server config
 mv ${JANUS_GREMLIN_SERVER_CONF}/gremlin-server.yaml ${JANUS_GREMLIN_SERVER_CONF}/gremlin-server.yaml.orig
 cp conf/gremlin-server.yaml ${JANUS_GREMLIN_SERVER_CONF}/gremlin-server.yaml
+# backup janusgraph.sh
+mv ${JANUS_BIN_PATH}/janusgraph.sh ${JANUS_BIN_PATH}/janusgraph.sh.orig
+cp conf/janusgraph.sh ${JANUS_BIN_PATH}/janusgraph.sh

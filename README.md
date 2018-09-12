@@ -19,18 +19,34 @@ JanusGraph, coupled with the FoundationDB storage adapter provides the following
 
 # Getting started
 
+The FoundationDB storage adapter requires a single FoundatoinDB instance or cluster and the FoundationDB client libraries. Downloads for server and client can be found [here](https://apple.github.io/foundationdb/downloads.html).
+
+## Setting up FoundationDB
+
 ## Installing from a binary release
 Binary releases can be found on [GitHub](http://github.com/experoinc/janusgraph-foundationdb/releases).
 
+This installation procedure will copy the necessary libraries, properties, and Gremlin Server configuration files into your JanusGraph installation.
+
 1. Download the JanusGraph [release](https://github.com/JanusGraph/janusgraph/releases) that is compatible up with the FoundationDB storage adapter.
 2. Download the desired FoundationDB storage adapter release.
-3. Unzip the storage adapter zip and copy the contents of the `lib` directory into your JanusGraph `ext` directory.
-4. Copy the `janusgraph-foundationdb.properties` file into your JanusGraph `conf` directory.
+3. Unzip the storage adapter zip file and run `./install.sh $YOUR_JANUSGRAPH_INSTALL_DIRECTORY`
+
+Assuming you have a FoundationDB cluster up and running, you can connect from the Gremlin console by running:
+
+`gremlin> graph = JanusGraphFactory.open('conf/janusgraph-foundationdb.properties')`
+
+To start Gremlin Server run `gremlin-server.sh` directly or `bin/janusgraph.sh start` which will also start a local Elasticsearch instance.
 
 ## Installing from source
 
-1. Clone the repository from GitHub.
+Follow these steps if you'd like to use the latest version built from source.
+1. Clone the repository.
     `git clone http://github.com/experoinc/janusgraph-foundationdb`
+2. Build the distribution package.
+    `mvn package -DskipTests`
+3. Follow the binary installation steps starting at step 3.
+
 # Configuration Options
 
 |Property|Description|Default|
