@@ -1,7 +1,6 @@
 package com.experoinc.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.Database;
-import com.apple.foundationdb.FDBException;
 import com.apple.foundationdb.KeyValue;
 import com.apple.foundationdb.Range;
 import com.apple.foundationdb.Transaction;
@@ -62,13 +61,16 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         }
     }
 
-    private Object resetLock = new Object();
-
     public synchronized void restart() {
         txId.incrementAndGet();
         if (tx == null) return;
-        tx.cancel();
-        tx.close();
+        try {
+            tx.cancel();
+        } catch (IllegalStateException e) {
+            //
+        } finally {
+            tx.close();
+        }
         tx = db.createTransaction();
         // Reapply mutations but do not clear them out just in case this transaction also
         // times out and they need to be reapplied.
@@ -116,17 +118,13 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 tx = null;
                 failing = false;
                 break;
-            } catch (ExecutionException e) {
+            } catch (IllegalStateException | ExecutionException e) {
                 if (isolationLevel.equals(IsolationLevel.READ_COMMITTED_NO_WRITE)) {
                     break;
                 }
                 restart();
             } catch (Exception e) {
                 throw new PermanentBackendException(e);
-            } finally {
-                if (tx != null) {
-                    tx.close();
-                }
             }
         }
         if (failing) {
