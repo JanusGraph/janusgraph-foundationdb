@@ -9,8 +9,6 @@ JanusGraph, coupled with the FoundationDB storage adapter provides the following
 * High availability
 * ACID transactions
 
-# Limitations
-
 # Compatibility Matrix
 
 |FDB Storage Adapter|JanusGraph|FoundationDB|
@@ -19,11 +17,13 @@ JanusGraph, coupled with the FoundationDB storage adapter provides the following
 
 # Getting started
 
-The FoundationDB storage adapter requires a single FoundatoinDB instance or cluster and the FoundationDB client libraries. Downloads for server and client can be found [here](https://apple.github.io/foundationdb/downloads.html).
+The FoundationDB storage adapter requires a single FoundationDB instance or cluster and the FoundationDB client libraries. Downloads for server and client can be found [here](https://apple.github.io/foundationdb/downloads.html).
 
 ## Setting up FoundationDB
 
-## Installing from a binary release
+Mac install instructions can be found [here](https://apple.github.io/foundationdb/getting-started-mac.html) and Linux [here](https://apple.github.io/foundationdb/getting-started-linux.html).
+
+## Installing the adapter from a binary release
 Binary releases can be found on [GitHub](http://github.com/experoinc/janusgraph-foundationdb/releases).
 
 This installation procedure will copy the necessary libraries, properties, and Gremlin Server configuration files into your JanusGraph installation.
@@ -53,5 +53,8 @@ Follow these steps if you'd like to use the latest version built from source.
 |-|-|-|
 |`storage.fdb.directory`|Name of the JanusGraph storage directory in FoundationDB.|`janusgraph`|
 |`storage.fdb.version`|The FoundationDB client version.|`5.2.0`|
-|`storage.fdb.cluster_file_path`|The location of the `fdb.cluster` file.|`/etc/foundationdb/fdb.cluster`|
-|`storage.fdb.serializable`|JanusGraph transactions are serializable if `true`, read committed if `false`.|`true`|
+|`storage.fdb.cluster-file-path`|The location of the `fdb.cluster` file.|`/etc/foundationdb/fdb.cluster`|
+|`storage.fdb.isolation-level`|The three options are `serializable`, `read_committed_no_write`, and `read_committed_with_write`.|`serializable`|
+
+## Isolation Levels
+FoundationDB provides serializable isolation under a specific set of [constraints](https://apple.github.io/foundationdb/known-limitations.html#current-limitations). Namely transactions will fail if they take longer than 5 seconds or read/write more than 10,000,000 bytes. This adapter allows the user to relax the how JanusGraph uses FoundationDB transactions and to spread a single JanusGraph transaction over more than one FoundationDB transaction. `read_committed_no_write` allows reads to be spread across more than one transasction, but will fail any writes that are attempted outside of the first transaction period. `read_committed_with_write` allows reads and writes to extend over more than one single transaction. If this option is selected, invariants may be broken and the system will behave similarily to an eventually consistent system.

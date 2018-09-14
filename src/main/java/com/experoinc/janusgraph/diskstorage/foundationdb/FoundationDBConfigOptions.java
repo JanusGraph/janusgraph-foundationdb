@@ -49,7 +49,7 @@ public interface FoundationDBConfigOptions {
 
     ConfigOption<String> CLUSTER_FILE_PATH = new ConfigOption<>(
         FDB_NS,
-        "cluster_file_path",
+        "cluster-file-path",
         "Path to the FoundationDB cluster file",
         ConfigOption.Type.LOCAL,
         "default");

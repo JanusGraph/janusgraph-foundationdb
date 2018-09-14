@@ -23,10 +23,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * @author twilmes
+ * @author Ted Wilmes (twilmes@gmail.com)
  */
 public class FoundationDBTx extends AbstractStoreTransaction {
-
 
     private static final Logger log = LoggerFactory.getLogger(FoundationDBTx.class);
 
@@ -43,7 +42,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
     private final IsolationLevel isolationLevel;
 
-    private AtomicInteger txId = new AtomicInteger(0);
+    private AtomicInteger txCtr = new AtomicInteger(0);
 
     public FoundationDBTx(Database db, Transaction t, BaseTransactionConfig config, IsolationLevel isolationLevel) {
         super(config);
@@ -62,7 +61,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
     }
 
     public synchronized void restart() {
-        txId.incrementAndGet();
+        txCtr.incrementAndGet();
         if (tx == null) return;
         try {
             tx.cancel();
@@ -75,7 +74,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         // Reapply mutations but do not clear them out just in case this transaction also
         // times out and they need to be reapplied.
         //
-        // @todo Note that at this point, the too large transaction case (tx exceeds 10,000,000 bytes) is not handled.
+        // @todo Note that at this point, the large transaction case (tx exceeds 10,000,000 bytes) is not handled.
         inserts.forEach(insert -> tx.set(insert.getKey(), insert.getValue()));
         deletions.forEach(delete -> tx.clear(delete));
     }
@@ -171,14 +170,14 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         boolean failing = true;
         List<KeyValue> result = Collections.emptyList();
         for (int i = 0; i < maxRuns; i++) {
-            final int startTxId = txId.get();
+            final int startTxId = txCtr.get();
             try {
                 result = tx.getRange(new Range(startKey, endKey), limit).asList().get();
                 if (result == null) return Collections.emptyList();
                 failing = false;
                 break;
             } catch (ExecutionException e) {
-                if (txId.get() == startTxId)
+                if (txCtr.get() == startTxId)
                     this.restart();
             } catch (Exception e) {
                 throw new PermanentBackendException(e);
@@ -193,15 +192,15 @@ public class FoundationDBTx extends AbstractStoreTransaction {
     public synchronized  Map<KVQuery, List<KeyValue>> getMultiRange(final List<Object[]> queries)
             throws PermanentBackendException {
         Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
-        List<Object[]> retries = new CopyOnWriteArrayList<>(queries);
-        List<CompletableFuture> futures = new LinkedList<>();
+        final List<Object[]> retries = new CopyOnWriteArrayList<>(queries);
+        final List<CompletableFuture> futures = new LinkedList<>();
         for (int i = 0; i < (maxRuns * 5); i++) {
             for(Object[] obj : retries) {
                 final KVQuery query = (KVQuery) obj[0];
                 final byte[] start = (byte[]) obj[1];
                 final byte[] end = (byte[]) obj[2];
 
-                final int startTxId = txId.get();
+                final int startTxId = txCtr.get();
                 try {
                     futures.add(tx.getRange(start, end, query.getLimit()).asList()
                             .whenComplete((res, th) -> {
@@ -212,7 +211,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                                     }
                                     resultMap.put(query, res);
                                 } else {
-                                    if (startTxId == txId.get())
+                                    if (startTxId == txCtr.get())
                                         this.restart();
                                 }
                             }));
@@ -228,7 +227,6 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 // some tasks will fail due to tx time limits being exceeded
             } catch (IllegalStateException is) {
                 // illegal state can arise from tx being closed while tx is inflight
-                // todo find way to clean this up and prevent this state from occurring
             } catch (Exception e) {
                 throw new PermanentBackendException(e);
             }
