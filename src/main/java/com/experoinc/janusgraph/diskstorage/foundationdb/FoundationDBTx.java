@@ -118,7 +118,8 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 failing = false;
                 break;
             } catch (IllegalStateException | ExecutionException e) {
-                if (isolationLevel.equals(IsolationLevel.READ_COMMITTED_NO_WRITE)) {
+                if (isolationLevel.equals(IsolationLevel.SERIALIZABLE) ||
+                        isolationLevel.equals(IsolationLevel.READ_COMMITTED_NO_WRITE)) {
                     break;
                 }
                 restart();
