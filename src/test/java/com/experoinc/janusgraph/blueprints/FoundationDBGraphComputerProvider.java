@@ -14,7 +14,7 @@
 
 package com.experoinc.janusgraph.blueprints;
 
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
+import com.experoinc.janusgraph.FoundationDBContainer;
 import com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBTx;
 import org.janusgraph.blueprints.AbstractJanusGraphComputerProvider;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
@@ -25,16 +25,21 @@ import org.apache.tinkerpop.gremlin.GraphProvider;
 import java.time.Duration;
 import java.util.Set;
 
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.USE_MULTIQUERY;
+
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
 @GraphProvider.Descriptor(computer = FulgoraGraphComputer.class)
 public class FoundationDBGraphComputerProvider extends AbstractJanusGraphComputerProvider {
 
+    public static final FoundationDBContainer fdbContainer = new FoundationDBContainer();
+
     @Override
     public ModifiableConfiguration getJanusGraphConfiguration(String graphName, Class<?> test, String testMethodName) {
+        fdbContainer.start();
         ModifiableConfiguration config = super.getJanusGraphConfiguration(graphName, test, testMethodName);
-        config.setAll(FoundationDBStorageSetup.getFoundationDBConfiguration().getAll());
+        config.setAll(fdbContainer.getFoundationDBConfiguration().getAll());
         config.set(GraphDatabaseConfiguration.IDAUTHORITY_WAIT, Duration.ofMillis(20));
         config.set(GraphDatabaseConfiguration.STORAGE_TRANSACTIONAL,false);
         return config;

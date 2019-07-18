@@ -14,47 +14,41 @@
 
 package com.experoinc.janusgraph.graphdb.foundationdb;
 
-import com.palantir.docker.compose.DockerComposeRule;
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
+import com.experoinc.janusgraph.FoundationDBContainer;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.JanusGraphFactory;
-import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.graphdb.JanusGraphTest;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+
 import static org.junit.Assert.*;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
 public class FoundationDBGraphTest extends JanusGraphTest {
 
-    @ClassRule
-    public static DockerComposeRule docker = FoundationDBStorageSetup.startFoundationDBDocker();
-
-    @Rule
-    public TestName methodNameRule = new TestName();
+    @Container
+    public static final FoundationDBContainer fdbContainer = new FoundationDBContainer();
 
     private static final Logger log =
             LoggerFactory.getLogger(FoundationDBGraphTest.class);
 
     @Override
     public WriteConfiguration getConfiguration() {
-        ModifiableConfiguration modifiableConfiguration = FoundationDBStorageSetup.getFoundationDBConfiguration();
-        String methodName = methodNameRule.getMethodName();
+        ModifiableConfiguration modifiableConfiguration = fdbContainer.getFoundationDBConfiguration();
+        String methodName = this.testInfo.getDisplayName();
         if (methodName.equals("testConsistencyEnforcement")) {
 //            IsolationLevel iso = IsolationLevel.SERIALIZABLE;
 //            log.debug("Forcing isolation level {} for test method {}", iso, methodName);
@@ -70,6 +64,7 @@ public class FoundationDBGraphTest extends JanusGraphTest {
     }
 
     @Test
+    @Disabled
     @Override
     public void testClearStorage() throws Exception {
 
@@ -122,6 +117,7 @@ public class FoundationDBGraphTest extends JanusGraphTest {
     }
 
     @Test
+    @Disabled
     @Override
     public void testLargeJointIndexRetrieval() {
         // disabled because exceeds FDB transaction commit limit

@@ -14,7 +14,7 @@
 
 package com.experoinc.janusgraph.blueprints;
 
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
+import com.experoinc.janusgraph.FoundationDBContainer;
 import org.janusgraph.blueprints.AbstractJanusGraphProvider;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 
@@ -23,9 +23,14 @@ import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
  */
 public class FoundationDBGraphProvider extends AbstractJanusGraphProvider {
 
+    public static final FoundationDBContainer fdbContainer = new FoundationDBContainer();
+
     @Override
     public ModifiableConfiguration getJanusGraphConfiguration(String graphName, Class<?> test, String testMethodName) {
-        if (graphName != null) return FoundationDBStorageSetup.getFoundationDBConfiguration(graphName);
-        else return FoundationDBStorageSetup.getFoundationDBConfiguration();
+        fdbContainer.start();
+        if(graphName != null) {
+            return fdbContainer.getFoundationDBConfiguration(graphName);
+        }
+        return fdbContainer.getFoundationDBConfiguration();
     }
 }

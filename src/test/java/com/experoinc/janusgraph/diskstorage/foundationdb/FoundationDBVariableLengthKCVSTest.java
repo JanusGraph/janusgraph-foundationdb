@@ -14,35 +14,40 @@
 
 package com.experoinc.janusgraph.diskstorage.foundationdb;
 
-import com.palantir.docker.compose.DockerComposeRule;
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
+import com.experoinc.janusgraph.FoundationDBContainer;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.KeyColumnValueStoreTest;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.OrderedKeyValueStoreManagerAdapter;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
 public class FoundationDBVariableLengthKCVSTest extends KeyColumnValueStoreTest {
 
-    @ClassRule
-    public static DockerComposeRule docker = FoundationDBStorageSetup.startFoundationDBDocker();
+    @Container
+    public static final FoundationDBContainer fdbContainer = new FoundationDBContainer();
 
     public KeyColumnValueStoreManager openStorageManager() throws BackendException {
-        FoundationDBStoreManager sm = new FoundationDBStoreManager(FoundationDBStorageSetup.getFoundationDBConfiguration());
+        FoundationDBStoreManager sm = new FoundationDBStoreManager(fdbContainer.getFoundationDBConfiguration());
         return new OrderedKeyValueStoreManagerAdapter(sm);
     }
 
     @Test
+    @Disabled
     @Override
     public void testConcurrentGetSlice() {
 
     }
 
-    @Test @Override
+    @Test
+    @Disabled
+    @Override
     public void testConcurrentGetSliceAndMutate() {
 
     }

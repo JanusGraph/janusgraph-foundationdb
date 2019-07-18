@@ -1,6 +1,6 @@
 package com.experoinc.janusgraph.blueprints;
 
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
+import com.experoinc.janusgraph.FoundationDBContainer;
 import org.janusgraph.blueprints.AbstractJanusGraphProvider;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 
@@ -11,9 +11,14 @@ import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.US
  */
 public class FoundationDBMultiQueryGraphProvider extends AbstractJanusGraphProvider {
 
+    public static final FoundationDBContainer fdbContainer = new FoundationDBContainer();
+
     @Override
     public ModifiableConfiguration getJanusGraphConfiguration(String graphName, Class<?> test, String testMethodName) {
-        return FoundationDBStorageSetup.getFoundationDBConfiguration()
-            .set(USE_MULTIQUERY, true);
+        fdbContainer.start();
+        if(graphName != null) {
+            return fdbContainer.getFoundationDBConfiguration(graphName).set(USE_MULTIQUERY, true);
+        }
+        return fdbContainer.getFoundationDBConfiguration().set(USE_MULTIQUERY, true);
     }
 }

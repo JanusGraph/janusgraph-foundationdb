@@ -36,6 +36,7 @@ import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,12 +59,12 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
 
     private final Map<String, FoundationDBKeyValueStore> stores;
 
-    protected FDB fdb;
-    protected Database db;
-    protected final StoreFeatures features;
-    protected DirectorySubspace rootDirectory;
-    protected final String rootDirectoryName;
-    protected final FoundationDBTx.IsolationLevel isolationLevel;
+    private FDB fdb;
+    private Database db;
+    private final StoreFeatures features;
+    private DirectorySubspace rootDirectory;
+    private final String rootDirectoryName;
+    private final FoundationDBTx.IsolationLevel isolationLevel;
 
     public FoundationDBStoreManager(Configuration configuration) throws BackendException {
         super(configuration);

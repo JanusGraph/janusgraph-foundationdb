@@ -14,45 +14,42 @@
 
 package com.experoinc.janusgraph;
 
-import com.palantir.docker.compose.DockerComposeRule;
-import com.palantir.docker.compose.connection.waiting.HealthChecks;
-import org.janusgraph.StorageSetup;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
+import org.testcontainers.containers.FixedHostPortGenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.ISOLATION_LEVEL;
+import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.*;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
-
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.CLUSTER_FILE_PATH;
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.DIRECTORY;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
-public class FoundationDBStorageSetup extends StorageSetup {
+public class FoundationDBContainer extends FixedHostPortGenericContainer<FoundationDBContainer> {
 
-
-    public static ModifiableConfiguration getFoundationDBConfiguration() {
+    public FoundationDBContainer() {
+        super("twilmes/foundationdb:5.2.5-ubuntu-18.04");
+        withExposedPorts(4500);
+        withFixedExposedPort(4500, 4500);
+        withFileSystemBind("./etc", "/etc/foundationdb");
+        waitingFor(
+                Wait.forLogMessage(".* FDBD joined cluster.*\\n", 1)
+        );
+    }
+    public ModifiableConfiguration getFoundationDBConfiguration() {
         return getFoundationDBConfiguration("janusgraph-test-fdb");
     }
 
-    public static ModifiableConfiguration getFoundationDBConfiguration(final String graphName) {
+    public ModifiableConfiguration getFoundationDBConfiguration(final String graphName) {
         return buildGraphConfiguration()
                 .set(STORAGE_BACKEND,"com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBStoreManager")
                 .set(DIRECTORY, graphName)
                 .set(DROP_ON_CLEAR, false)
-                .set(CLUSTER_FILE_PATH, "src/test/resources/etc/fdb.cluster")
+                .set(CLUSTER_FILE_PATH, "etc/fdb.cluster")
                 .set(ISOLATION_LEVEL, "read_committed_with_write");
     }
 
-    public static WriteConfiguration getFoundationDBGraphConfiguration() {
-        return getFoundationDBConfiguration().getConfiguration();
-    }
-
-    public static DockerComposeRule startFoundationDBDocker() {
-        return DockerComposeRule.builder()
-            .file("src/test/resources/docker-compose.yml")
-            .waitingForService("db", HealthChecks.toHaveAllPortsOpen())
-            .build();
+    public WriteConfiguration getFoundationDBGraphConfiguration() {
+        return getFoundationDBConfiguration("janusgraph-test-fdb").getConfiguration();
     }
 }
