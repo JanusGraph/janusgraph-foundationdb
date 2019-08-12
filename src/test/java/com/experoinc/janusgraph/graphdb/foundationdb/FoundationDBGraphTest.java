@@ -15,6 +15,8 @@
 package com.experoinc.janusgraph.graphdb.foundationdb;
 
 import com.experoinc.janusgraph.FoundationDBContainer;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.diskstorage.BackendException;
@@ -30,6 +32,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static org.junit.Assert.*;
 
@@ -128,5 +133,22 @@ public class FoundationDBGraphTest extends JanusGraphTest {
     public void testVertexCentricQuery() {
         // updated to not exceed FDB transaction commit limit
         testVertexCentricQuery(1000 /*noVertices*/);
+    }
+
+    @Test
+    public void testSuperNode(){
+        GraphTraversalSource g = graph.traversal();
+
+        Vertex from = g.addV("from").property("id", 0).next();
+
+        List<Long> aList = LongStream.rangeClosed(0, 1000-1).boxed()
+                .collect(Collectors.toList());
+        aList.stream()
+                .forEach(t -> g.addV("to").property("id", t).as("to")
+                        .addE("created").from(from).to("to").property("weight", 0.4)
+                        .addV("to2").as("to2")
+                        .addE("created2").from("to").to("to2").iterate());
+
+        assertEquals(1000, g.V().has("from", "id", 0).out().out().count().next().longValue());
     }
 }

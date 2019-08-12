@@ -21,7 +21,10 @@ import com.apple.foundationdb.directory.DirectoryLayer;
 import com.apple.foundationdb.directory.DirectorySubspace;
 import com.apple.foundationdb.directory.PathUtil;
 import com.google.common.base.Preconditions;
-import org.janusgraph.diskstorage.*;
+import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.BaseTransactionConfig;
+import org.janusgraph.diskstorage.PermanentBackendException;
+import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.common.AbstractStoreManager;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyRange;
@@ -32,20 +35,15 @@ import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVMutation;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeyValueEntry;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.OrderedKeyValueStoreManager;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.CLUSTER_FILE_PATH;
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.DIRECTORY;
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.ISOLATION_LEVEL;
-import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.VERSION;
+import static com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.*;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.GRAPH_NAME;
 
 /**
@@ -74,6 +72,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
         rootDirectoryName = determineRootDirectoryName(configuration);
         db = !"default".equals(configuration.get(CLUSTER_FILE_PATH)) ?
             fdb.open(configuration.get(CLUSTER_FILE_PATH)) : fdb.open();
+
         final String isolationLevelStr = configuration.get(ISOLATION_LEVEL);
         switch (isolationLevelStr.toLowerCase().trim()) {
             case "serializable":
