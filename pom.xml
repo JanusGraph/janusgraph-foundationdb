@@ -13,8 +13,8 @@
     <properties>
         <maven.compiler.plugin.version>3.6.2</maven.compiler.plugin.version>
         <jdk.version>1.8</jdk.version>
-        <janusgraph.version>0.3.0</janusgraph.version>
-        <foundationdb.version>5.2.5</foundationdb.version>
+        <janusgraph.version>0.4.0</janusgraph.version>
+        <foundationdb.version>6.2.10</foundationdb.version>
         <dependency.plugin.version>2.10</dependency.plugin.version>
         <test.skip.default>false</test.skip.default>
         <test.skip.tp>true</test.skip.tp>
@@ -66,10 +66,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.apple</groupId>
-            <artifactId>foundationdb</artifactId>
+            <groupId>org.foundationdb</groupId>
+            <artifactId>fdb-java</artifactId>
             <version>${foundationdb.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.palantir.docker.compose</groupId>
             <artifactId>docker-compose-rule-junit4</artifactId>
