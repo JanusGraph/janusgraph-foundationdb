@@ -118,6 +118,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 failing = false;
                 break;
             } catch (IllegalStateException | ExecutionException e) {
+                log.warn("failed to commit transaction", e);
                 if (isolationLevel.equals(IsolationLevel.SERIALIZABLE) ||
                         isolationLevel.equals(IsolationLevel.READ_COMMITTED_NO_WRITE)) {
                     break;
@@ -155,6 +156,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 failing = false;
                 break;
             } catch (ExecutionException e) {
+                log.warn("failed to get ", e);
                 this.restart();
             } catch (Exception e) {
                 throw new PermanentBackendException(e);
@@ -178,6 +180,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 failing = false;
                 break;
             } catch (ExecutionException e) {
+                log.warn("failed to getRange", e);
                 if (txCtr.get() == startTxId)
                     this.restart();
             } catch (Exception e) {
