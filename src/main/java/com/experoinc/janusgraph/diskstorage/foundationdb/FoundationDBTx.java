@@ -232,6 +232,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             } catch (IllegalStateException is) {
                 // illegal state can arise from tx being closed while tx is inflight
             } catch (Exception e) {
+                log.error("failed to get multi range for queries {}", queries, e);
                 throw new PermanentBackendException(e);
             }
         }
