@@ -184,6 +184,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 if (txCtr.get() == startTxId)
                     this.restart();
             } catch (Exception e) {
+                log.error("raising backend exception for startKey {} endKey {} limit", startKey, endKey, limit, e);
                 throw new PermanentBackendException(e);
             }
         }
