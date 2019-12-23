@@ -184,6 +184,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 if (txCtr.get() == startTxId)
                     this.restart();
             } catch (Exception e) {
+                log.error("raising backend exception for startKey {} endKey {} limit", startKey, endKey, limit, e);
                 throw new PermanentBackendException(e);
             }
         }
@@ -232,6 +233,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             } catch (IllegalStateException is) {
                 // illegal state can arise from tx being closed while tx is inflight
             } catch (Exception e) {
+                log.error("failed to get multi range for queries {}", queries, e);
                 throw new PermanentBackendException(e);
             }
         }
