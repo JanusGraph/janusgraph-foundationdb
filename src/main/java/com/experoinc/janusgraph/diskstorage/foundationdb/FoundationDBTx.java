@@ -90,6 +90,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             tx.close();
             tx = null;
         } catch (Exception e) {
+            log.error("failed to rollback", e);
             throw new PermanentBackendException(e);
         } finally {
             if (tx != null)
@@ -125,6 +126,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 }
                 restart();
             } catch (Exception e) {
+                log.error("failed to commit", e);
                 throw new PermanentBackendException(e);
             }
         }
@@ -159,6 +161,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 log.warn("failed to get ", e);
                 this.restart();
             } catch (Exception e) {
+                log.error("failed to get key {}", key, e);
                 throw new PermanentBackendException(e);
             }
         }
