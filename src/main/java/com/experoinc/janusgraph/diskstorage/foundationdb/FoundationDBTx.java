@@ -198,7 +198,8 @@ public class FoundationDBTx extends AbstractStoreTransaction {
     }
 
     private <T> T getTransaction(IsolationLevel isolationLevel, Transaction tx) {
-        if(IsolationLevel.READ_COMMITTED_NO_WRITE.equals(isolationLevel)) {
+        if(IsolationLevel.READ_COMMITTED_NO_WRITE.equals(isolationLevel)
+                || IsolationLevel.READ_COMMITTED_WITH_WRITE.equals(isolationLevel)) {
             return (T)tx.snapshot();
         } else {
             return (T)tx;
