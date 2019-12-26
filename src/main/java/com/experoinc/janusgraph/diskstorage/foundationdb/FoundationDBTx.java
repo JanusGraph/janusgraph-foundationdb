@@ -1,9 +1,6 @@
 package com.experoinc.janusgraph.diskstorage.foundationdb;
 
-import com.apple.foundationdb.Database;
-import com.apple.foundationdb.KeyValue;
-import com.apple.foundationdb.Range;
-import com.apple.foundationdb.Transaction;
+import com.apple.foundationdb.*;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.PermanentBackendException;
@@ -154,7 +151,8 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         byte[] value = null;
         for (int i = 0; i < maxRuns; i++) {
             try {
-                value = this.tx.get(key).get();
+                ReadTransaction transaction  = getTransaction(this.isolationLevel, this.tx);
+                value = transaction.get(key).get();
                 failing = false;
                 break;
             } catch (ExecutionException e) {
@@ -178,7 +176,9 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         for (int i = 0; i < maxRuns; i++) {
             final int startTxId = txCtr.get();
             try {
-                result = tx.getRange(new Range(startKey, endKey), limit).asList().get();
+                ReadTransaction transaction = getTransaction(isolationLevel, this.tx);
+
+                result = transaction.getRange(new Range(startKey, endKey), limit).asList().get();
                 if (result == null) return Collections.emptyList();
                 failing = false;
                 break;
@@ -195,6 +195,14 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             throw new PermanentBackendException("Max transaction reset count exceeded");
         }
         return result;
+    }
+
+    private <T> T getTransaction(IsolationLevel isolationLevel, Transaction tx) {
+        if(IsolationLevel.READ_COMMITTED_NO_WRITE.equals(isolationLevel)) {
+            return (T)tx.snapshot();
+        } else {
+            return (T)tx;
+        }
     }
 
     public synchronized  Map<KVQuery, List<KeyValue>> getMultiRange(final List<Object[]> queries)
