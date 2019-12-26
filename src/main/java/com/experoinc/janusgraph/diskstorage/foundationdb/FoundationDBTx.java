@@ -177,7 +177,6 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             final int startTxId = txCtr.get();
             try {
                 ReadTransaction transaction = getTransaction(isolationLevel, this.tx);
-
                 result = transaction.getRange(new Range(startKey, endKey), limit).asList().get();
                 if (result == null) return Collections.emptyList();
                 failing = false;
