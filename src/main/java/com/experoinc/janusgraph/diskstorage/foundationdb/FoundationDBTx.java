@@ -1,6 +1,10 @@
 package com.experoinc.janusgraph.diskstorage.foundationdb;
 
-import com.apple.foundationdb.*;
+import com.apple.foundationdb.Database;
+import com.apple.foundationdb.KeyValue;
+import com.apple.foundationdb.ReadTransaction;
+import com.apple.foundationdb.Transaction;
+import com.apple.foundationdb.Range;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.PermanentBackendException;
@@ -170,7 +174,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
     }
 
     public List<KeyValue> getRange(final byte[] startKey, final byte[] endKey,
-                                            final int limit) throws PermanentBackendException {
+                                   final int limit) throws PermanentBackendException {
         boolean failing = true;
         List<KeyValue> result = Collections.emptyList();
         for (int i = 0; i < maxRuns; i++) {
