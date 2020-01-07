@@ -5,6 +5,7 @@ import com.apple.foundationdb.KeyValue;
 import com.apple.foundationdb.ReadTransaction;
 import com.apple.foundationdb.Transaction;
 import com.apple.foundationdb.Range;
+import com.apple.foundationdb.async.AsyncIterable;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.PermanentBackendException;
@@ -13,10 +14,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -173,31 +171,19 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         return value;
     }
 
-    public List<KeyValue> getRange(final byte[] startKey, final byte[] endKey,
-                                   final int limit) throws PermanentBackendException {
-        boolean failing = true;
-        List<KeyValue> result = Collections.emptyList();
-        for (int i = 0; i < maxRuns; i++) {
-            final int startTxId = txCtr.get();
-            try {
-                ReadTransaction transaction = getTransaction(isolationLevel, this.tx);
-                result = transaction.getRange(new Range(startKey, endKey), limit).asList().get();
-                if (result == null) return Collections.emptyList();
-                failing = false;
-                break;
-            } catch (ExecutionException e) {
-                log.warn("failed to getRange", e);
-                if (txCtr.get() == startTxId)
-                    this.restart();
-            } catch (Exception e) {
-                log.error("raising backend exception for startKey {} endKey {} limit", startKey, endKey, limit, e);
-                throw new PermanentBackendException(e);
+    public Iterator<KeyValue> getRange(final byte[] startKey, final byte[] endKey,
+                                       final int limit) throws PermanentBackendException {
+        try {
+            ReadTransaction transaction = getTransaction(isolationLevel, this.tx);
+            AsyncIterable<KeyValue> result = transaction.getRange(new Range(startKey, endKey), limit);
+            if (result == null) {
+                return Collections.emptyIterator();
             }
+            return result.iterator();
+        } catch (Exception e) {
+            log.error("raising backend exception for startKey {} endKey {} limit", startKey, endKey, limit, e);
+            throw new PermanentBackendException(e);
         }
-        if (failing) {
-            throw new PermanentBackendException("Max transaction reset count exceeded");
-        }
-        return result;
     }
 
     private <T> T getTransaction(IsolationLevel isolationLevel, Transaction tx) {
