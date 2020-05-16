@@ -208,6 +208,10 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
     }
 
     @Override
+    public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh, Integer ttl) throws BackendException {
+        insert(key,value, txh);
+    }
+
     public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh) throws BackendException {
         insert(key, value, txh, true);
     }

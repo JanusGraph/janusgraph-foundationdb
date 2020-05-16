@@ -13,8 +13,8 @@
     <properties>
         <maven.compiler.plugin.version>3.6.2</maven.compiler.plugin.version>
         <jdk.version>1.8</jdk.version>
-        <janusgraph.version>0.3.0</janusgraph.version>
-        <foundationdb.version>5.2.5</foundationdb.version>
+        <janusgraph.version>0.5.0</janusgraph.version>
+        <foundationdb.version>6.2.10</foundationdb.version>
         <dependency.plugin.version>2.10</dependency.plugin.version>
         <test.skip.default>false</test.skip.default>
         <test.skip.tp>true</test.skip.tp>
@@ -39,14 +39,6 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
-            <id>central</id>
-            <name>bintray</name>
-            <url>http://jcenter.bintray.com</url>
-        </repository>
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
             <id>palantir</id>
             <name>bintray></name>
             <url>https://dl.bintray.com/palantir/releases</url>
@@ -61,15 +53,22 @@
         </dependency>
         <dependency>
             <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-hbase</artifactId>
+            <version>${janusgraph.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-test</artifactId>
             <version>${janusgraph.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.foundationdb/fdb-java -->
         <dependency>
-            <groupId>com.apple</groupId>
-            <artifactId>foundationdb</artifactId>
+            <groupId>org.foundationdb</groupId>
+            <artifactId>fdb-java</artifactId>
             <version>${foundationdb.version}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.palantir.docker.compose/docker-compose-rule-junit4 -->
         <dependency>
             <groupId>com.palantir.docker.compose</groupId>
             <artifactId>docker-compose-rule-junit4</artifactId>
