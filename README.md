@@ -24,7 +24,7 @@ The FoundationDB storage adapter requires a single FoundationDB instance or clus
 Mac install instructions can be found [here](https://apple.github.io/foundationdb/getting-started-mac.html) and Linux [here](https://apple.github.io/foundationdb/getting-started-linux.html).
 
 ## Installing the adapter from a binary release
-Binary releases can be found on [GitHub](http://github.com/experoinc/janusgraph-foundationdb/releases).
+Binary releases can be found on [GitHub](http://github.com/JanusGraph/janusgraph-foundationdb/releases).
 
 This installation procedure will copy the necessary libraries, properties, and Gremlin Server configuration files into your JanusGraph installation.
 
@@ -42,7 +42,7 @@ To start Gremlin Server run `gremlin-server.sh` directly or `bin/janusgraph.sh s
 
 Follow these steps if you'd like to use the latest version built from source.
 1. Clone the repository.
-    `git clone http://github.com/experoinc/janusgraph-foundationdb`
+    `git clone http://github.com/JanusGraph/janusgraph-foundationdb`
 2. Build the distribution package.
     `mvn package -DskipTests`
 3. Follow the binary installation steps starting at step 3.
