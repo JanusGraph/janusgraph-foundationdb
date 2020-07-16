@@ -14,14 +14,14 @@
 
 package com.experoinc.janusgraph.blueprints.structure;
 
-import com.palantir.docker.compose.DockerComposeRule;
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
-import com.experoinc.janusgraph.blueprints.FoundationDBGraphProvider;
-import org.janusgraph.core.JanusGraph;
 import org.apache.tinkerpop.gremlin.GraphProviderClass;
 import org.apache.tinkerpop.gremlin.structure.StructureStandardSuite;
+import org.janusgraph.core.JanusGraph;
 import org.junit.ClassRule;
 import org.junit.runner.RunWith;
+
+import com.experoinc.janusgraph.FoundationDBContainer;
+import com.experoinc.janusgraph.blueprints.FoundationDBGraphProvider;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
@@ -31,5 +31,5 @@ import org.junit.runner.RunWith;
 public class FoundationDBJanusGraphStructureTest {
 
     @ClassRule
-    public static DockerComposeRule docker = FoundationDBStorageSetup.startFoundationDBDocker();
+    public static FoundationDBContainer container = new FoundationDBContainer();
 }

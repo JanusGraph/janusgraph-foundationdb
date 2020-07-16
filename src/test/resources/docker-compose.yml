@@ -1,9 +1,0 @@
-version: '3'
-
-services:
-  db:
-    image: twilmes/foundationdb:5.2.5-ubuntu-18.04
-    volumes:
-    - ./etc:/etc/foundationdb
-    ports:
-    - "4500:4500"

@@ -14,11 +14,11 @@
 
 package com.experoinc.janusgraph.graphdb.foundationdb;
 
-import com.palantir.docker.compose.DockerComposeRule;
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.olap.OLAPTest;
 import org.junit.ClassRule;
+
+import com.experoinc.janusgraph.FoundationDBContainer;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
@@ -26,11 +26,11 @@ import org.junit.ClassRule;
 public class FoundationDBOLAPTest extends OLAPTest {
 
     @ClassRule
-    public static DockerComposeRule docker = FoundationDBStorageSetup.startFoundationDBDocker();
+    public static FoundationDBContainer container = new FoundationDBContainer();
 
     @Override
     public WriteConfiguration getConfiguration() {
-        return FoundationDBStorageSetup.getFoundationDBGraphConfiguration();
+        return container.getFoundationDBGraphConfiguration();
     }
 
 }
