@@ -18,6 +18,7 @@
         <dependency.plugin.version>2.10</dependency.plugin.version>
         <test.skip.default>false</test.skip.default>
         <test.skip.tp>true</test.skip.tp>
+        <testcontainers.version>1.14.3</testcontainers.version>
     </properties>
 
     <developers>
@@ -34,25 +35,6 @@
         </license>
     </licenses>
 
-    <repositories>
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <id>central</id>
-            <name>bintray</name>
-            <url>http://jcenter.bintray.com</url>
-        </repository>
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <id>palantir</id>
-            <name>bintray></name>
-            <url>https://dl.bintray.com/palantir/releases</url>
-        </repository>
-    </repositories>
-
     <dependencies>
         <dependency>
             <groupId>org.janusgraph</groupId>
@@ -66,14 +48,14 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.apple</groupId>
-            <artifactId>foundationdb</artifactId>
+            <groupId>org.foundationdb</groupId>
+            <artifactId>fdb-java</artifactId>
             <version>${foundationdb.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.palantir.docker.compose</groupId>
-            <artifactId>docker-compose-rule-junit4</artifactId>
-            <version>0.33.0</version>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -14,12 +14,11 @@
 
 package com.experoinc.janusgraph.graphdb.foundationdb;
 
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
-
-import com.palantir.docker.compose.DockerComposeRule;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.graphdb.JanusGraphPartitionGraphTest;
 import org.junit.ClassRule;
+
+import com.experoinc.janusgraph.FoundationDBContainer;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
@@ -27,10 +26,10 @@ import org.junit.ClassRule;
 public class FoundationDBPartitionGraphTest extends JanusGraphPartitionGraphTest {
 
     @ClassRule
-    public static DockerComposeRule docker = FoundationDBStorageSetup.startFoundationDBDocker();
+    public static FoundationDBContainer container = new FoundationDBContainer();
 
     @Override
     public WriteConfiguration getBaseConfiguration() {
-        return FoundationDBStorageSetup.getFoundationDBGraphConfiguration();
+        return container.getFoundationDBGraphConfiguration();
     }
 }
