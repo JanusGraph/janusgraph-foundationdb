@@ -53,11 +53,6 @@
         </dependency>
         <dependency>
             <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-hbase</artifactId>
-            <version>${janusgraph.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-test</artifactId>
             <version>${janusgraph.version}</version>
             <scope>test</scope>
@@ -68,7 +63,6 @@
             <artifactId>fdb-java</artifactId>
             <version>${foundationdb.version}</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.palantir.docker.compose/docker-compose-rule-junit4 -->
         <dependency>
             <groupId>com.palantir.docker.compose</groupId>
             <artifactId>docker-compose-rule-junit4</artifactId>
