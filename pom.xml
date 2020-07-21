@@ -13,8 +13,8 @@
     <properties>
         <maven.compiler.plugin.version>3.6.2</maven.compiler.plugin.version>
         <jdk.version>1.8</jdk.version>
-        <janusgraph.version>0.5.0</janusgraph.version>
-        <foundationdb.version>6.2.10</foundationdb.version>
+        <janusgraph.version>0.5.2</janusgraph.version>
+        <foundationdb.version>6.2.22</foundationdb.version>
         <dependency.plugin.version>2.10</dependency.plugin.version>
         <test.skip.default>false</test.skip.default>
         <test.skip.tp>true</test.skip.tp>
