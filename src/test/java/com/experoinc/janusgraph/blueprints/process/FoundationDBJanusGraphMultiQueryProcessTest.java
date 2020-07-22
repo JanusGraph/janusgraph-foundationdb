@@ -1,12 +1,12 @@
 package com.experoinc.janusgraph.blueprints.process;
 
-import com.palantir.docker.compose.DockerComposeRule;
 import org.apache.tinkerpop.gremlin.GraphProviderClass;
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
-import com.experoinc.janusgraph.blueprints.FoundationDBMultiQueryGraphProvider;
 import org.janusgraph.core.JanusGraph;
 import org.junit.ClassRule;
 import org.junit.runner.RunWith;
+
+import com.experoinc.janusgraph.FoundationDBContainer;
+import com.experoinc.janusgraph.blueprints.FoundationDBMultiQueryGraphProvider;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
@@ -16,5 +16,5 @@ import org.junit.runner.RunWith;
 public class FoundationDBJanusGraphMultiQueryProcessTest {
 
     @ClassRule
-    public static DockerComposeRule docker = FoundationDBStorageSetup.startFoundationDBDocker();
+    public static FoundationDBContainer container = new FoundationDBContainer();
 }

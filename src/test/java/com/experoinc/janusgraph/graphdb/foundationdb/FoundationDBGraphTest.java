@@ -14,13 +14,20 @@
 
 package com.experoinc.janusgraph.graphdb.foundationdb;
 
-import com.palantir.docker.compose.DockerComposeRule;
-import com.experoinc.janusgraph.FoundationDBStorageSetup;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.JanusGraphFactory;
-import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
+import org.janusgraph.diskstorage.configuration.ConfigOption;
+import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
+import org.janusgraph.diskstorage.configuration.WriteConfiguration;
+import org.janusgraph.graphdb.JanusGraphTest;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,14 +35,9 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.janusgraph.diskstorage.configuration.ConfigElement;
-import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
-import org.janusgraph.diskstorage.configuration.WriteConfiguration;
-import org.janusgraph.graphdb.JanusGraphTest;
-
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import static org.junit.Assert.*;
+import com.experoinc.janusgraph.FoundationDBContainer;
+import com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions;
+import com.experoinc.janusgraph.diskstorage.foundationdb.FoundationDBTx.IsolationLevel;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
@@ -43,7 +45,7 @@ import static org.junit.Assert.*;
 public class FoundationDBGraphTest extends JanusGraphTest {
 
     @ClassRule
-    public static DockerComposeRule docker = FoundationDBStorageSetup.startFoundationDBDocker();
+    public static FoundationDBContainer container = new FoundationDBContainer();
 
     @Rule
     public TestName methodNameRule = new TestName();
@@ -53,18 +55,18 @@ public class FoundationDBGraphTest extends JanusGraphTest {
 
     @Override
     public WriteConfiguration getConfiguration() {
-        ModifiableConfiguration modifiableConfiguration = FoundationDBStorageSetup.getFoundationDBConfiguration();
+        ModifiableConfiguration modifiableConfiguration = container.getFoundationDBConfiguration();
         String methodName = methodNameRule.getMethodName();
         if (methodName.equals("testConsistencyEnforcement")) {
-//            IsolationLevel iso = IsolationLevel.SERIALIZABLE;
-//            log.debug("Forcing isolation level {} for test method {}", iso, methodName);
-//            modifiableConfiguration.set(FoundationDBStoreManager.ISOLATION_LEVEL, iso.toString());
+            IsolationLevel iso = IsolationLevel.SERIALIZABLE;
+            log.debug("Forcing isolation level {} for test method {}", iso, methodName);
+            modifiableConfiguration.set(FoundationDBConfigOptions.ISOLATION_LEVEL, iso.toString());
         } else {
-//            IsolationLevel iso = null;
-//            if (modifiableConfiguration.has(FoundationDBStoreManager.ISOLATION_LEVEL)) {
-//                iso = ConfigOption.getEnumValue(modifiableConfiguration.get(FoundationDBStoreManager.ISOLATION_LEVEL),IsolationLevel.class);
-//            }
-//            log.debug("Using isolation level {} (null means adapter default) for test method {}", iso, methodName);
+            IsolationLevel iso = null;
+            if (modifiableConfiguration.has(FoundationDBConfigOptions.ISOLATION_LEVEL)) {
+                iso = ConfigOption.getEnumValue(modifiableConfiguration.get(FoundationDBConfigOptions.ISOLATION_LEVEL),IsolationLevel.class);
+            }
+            log.debug("Using isolation level {} (null means adapter default) for test method {}", iso, methodName);
         }
         return modifiableConfiguration.getConfiguration();
     }
