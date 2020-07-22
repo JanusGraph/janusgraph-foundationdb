@@ -14,18 +14,19 @@
 
 package com.experoinc.janusgraph.graphdb.foundationdb;
 
+import com.experoinc.janusgraph.FoundationDBContainer;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.olap.OLAPTest;
-import org.junit.ClassRule;
-
-import com.experoinc.janusgraph.FoundationDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
 public class FoundationDBOLAPTest extends OLAPTest {
 
-    @ClassRule
+    @Container
     public static FoundationDBContainer container = new FoundationDBContainer();
 
     @Override

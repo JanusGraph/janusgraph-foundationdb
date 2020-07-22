@@ -115,6 +115,11 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
     }
 
     @Override
+    public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh, Integer integer) throws BackendException {
+        insert(key, value, txh);
+    }
+
+    @Override
     public RecordIterator<KeyValueEntry> getSlice(KVQuery query, StoreTransaction txh) throws BackendException {
         log.trace("beginning db={}, op=getSlice, tx={}", name, txh);
         final FoundationDBTx tx = getTransaction(txh);
@@ -207,12 +212,7 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         return resultMap;
     }
 
-    @Override
     public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh) throws BackendException {
-        insert(key, value, txh, true);
-    }
-
-    public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh, boolean allowOverwrite) throws BackendException {
         FoundationDBTx tx = getTransaction(txh);
         try {
 

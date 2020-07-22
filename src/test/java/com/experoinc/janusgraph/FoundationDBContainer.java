@@ -56,6 +56,10 @@ public class FoundationDBContainer extends FixedHostPortGenericContainer<Foundat
 
     @Override
     public void start() {
+        if (this.getContainerId() != null) {
+            // Already started this container.
+            return;
+        }
         super.start();
         // initialize the database
         Container.ExecResult execResult;
@@ -68,7 +72,7 @@ public class FoundationDBContainer extends FixedHostPortGenericContainer<Foundat
             throw new ContainerLaunchException("Container startup failed. Failed to initialize the database. Received non zero exit code from fdbcli command. Response code was: " + execResult.getExitCode() + ".");
         }
     }
-  
+
     public ModifiableConfiguration getFoundationDBConfiguration() {
         return getFoundationDBConfiguration("janusgraph-test-fdb");
     }

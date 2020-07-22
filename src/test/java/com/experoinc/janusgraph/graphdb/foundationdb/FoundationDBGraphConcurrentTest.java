@@ -16,21 +16,24 @@ package com.experoinc.janusgraph.graphdb.foundationdb;
 
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.graphdb.JanusGraphConcurrentTest;
-import org.junit.ClassRule;
 
 import com.experoinc.janusgraph.FoundationDBContainer;
+import org.junit.jupiter.api.Disabled;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
+@Disabled
 public class FoundationDBGraphConcurrentTest extends JanusGraphConcurrentTest {
 
-    @ClassRule
+    @Container
     public static FoundationDBContainer container = new FoundationDBContainer();
 
     @Override
     public WriteConfiguration getConfiguration() {
         return container.getFoundationDBGraphConfiguration();
     }
-
 }
