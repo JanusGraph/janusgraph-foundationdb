@@ -20,7 +20,6 @@ import org.janusgraph.blueprints.AbstractJanusGraphComputerProvider;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
-import org.junit.ClassRule;
 import org.apache.tinkerpop.gremlin.GraphProvider;
 
 import java.time.Duration;
@@ -32,11 +31,11 @@ import java.util.Set;
 @GraphProvider.Descriptor(computer = FulgoraGraphComputer.class)
 public class FoundationDBGraphComputerProvider extends AbstractJanusGraphComputerProvider {
 
-    @ClassRule
-    public static FoundationDBContainer container = new FoundationDBContainer();
+    private final static FoundationDBContainer container = new FoundationDBContainer();
 
     @Override
     public ModifiableConfiguration getJanusGraphConfiguration(String graphName, Class<?> test, String testMethodName) {
+        container.start();
         ModifiableConfiguration config = super.getJanusGraphConfiguration(graphName, test, testMethodName);
         config.setAll(container.getFoundationDBConfiguration().getAll());
         config.set(GraphDatabaseConfiguration.IDAUTHORITY_WAIT, Duration.ofMillis(20));

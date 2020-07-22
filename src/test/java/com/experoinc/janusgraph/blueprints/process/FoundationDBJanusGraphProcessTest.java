@@ -16,7 +16,6 @@ package com.experoinc.janusgraph.blueprints.process;
 
 import org.apache.tinkerpop.gremlin.GraphProviderClass;
 import org.janusgraph.core.JanusGraph;
-import org.junit.ClassRule;
 import org.junit.runner.RunWith;
 import org.testcontainers.containers.GenericContainer;
 
@@ -29,7 +28,4 @@ import com.experoinc.janusgraph.blueprints.FoundationDBGraphProvider;
 @RunWith(FoundationDBProcessStandardSuite.class)
 @GraphProviderClass(provider = FoundationDBGraphProvider.class, graph = JanusGraph.class)
 public class FoundationDBJanusGraphProcessTest {
-
-    @ClassRule
-    public static GenericContainer container = new FoundationDBContainer();
 }

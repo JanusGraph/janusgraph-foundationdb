@@ -18,16 +18,18 @@ import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.OrderedKeyValueStoreManagerAdapter;
 import org.janusgraph.diskstorage.log.KCVSLogTest;
-import org.junit.ClassRule;
 
 import com.experoinc.janusgraph.FoundationDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
 public class FoundationDBLogTest extends KCVSLogTest {
 
-    @ClassRule
+    @Container
     public static FoundationDBContainer container = new FoundationDBContainer();
 
     public KeyColumnValueStoreManager openStorageManager() throws BackendException {

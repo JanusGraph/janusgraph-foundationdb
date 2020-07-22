@@ -17,16 +17,18 @@ package com.experoinc.janusgraph.diskstorage.foundationdb;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.KeyValueStoreTest;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.OrderedKeyValueStoreManager;
-import org.junit.ClassRule;
 
 import com.experoinc.janusgraph.FoundationDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
 public class FoundationDBKeyValueTest extends KeyValueStoreTest {
 
-    @ClassRule
+    @Container
     public static FoundationDBContainer container = new FoundationDBContainer();
 
 

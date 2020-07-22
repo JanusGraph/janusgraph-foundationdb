@@ -14,18 +14,19 @@
 
 package com.experoinc.janusgraph.graphdb.database.management;
 
+import com.experoinc.janusgraph.FoundationDBContainer;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.graphdb.database.management.ManagementTest;
-import org.junit.ClassRule;
-
-import com.experoinc.janusgraph.FoundationDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
 public class FoundationDBManagementTest extends ManagementTest {
 
-    @ClassRule
+    @Container
     public static FoundationDBContainer container = new FoundationDBContainer();
 
     @Override

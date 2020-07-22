@@ -17,18 +17,17 @@ package com.experoinc.janusgraph.blueprints;
 import com.experoinc.janusgraph.FoundationDBContainer;
 import org.janusgraph.blueprints.AbstractJanusGraphProvider;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
-import org.junit.ClassRule;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
 public class FoundationDBGraphProvider extends AbstractJanusGraphProvider {
 
-    @ClassRule
-    public static FoundationDBContainer container = new FoundationDBContainer();
+    private final static FoundationDBContainer container = new FoundationDBContainer();
 
     @Override
     public ModifiableConfiguration getJanusGraphConfiguration(String graphName, Class<?> test, String testMethodName) {
+        container.start();
         if (graphName != null) return container.getFoundationDBConfiguration(graphName);
         else return container.getFoundationDBConfiguration();
     }

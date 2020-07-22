@@ -18,18 +18,20 @@ import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.KeyColumnValueStoreTest;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.OrderedKeyValueStoreManagerAdapter;
-import org.junit.ClassRule;
-import org.junit.Test;
 
 import com.experoinc.janusgraph.FoundationDBContainer;
 import com.google.common.collect.ImmutableMap;
+import org.junit.jupiter.api.Test;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
+@Testcontainers
 public class FoundationDBFixedLengthKCVSTest extends KeyColumnValueStoreTest {
 
-    @ClassRule
+    @Container
     public static FoundationDBContainer container = new FoundationDBContainer();
 
     public KeyColumnValueStoreManager openStorageManager() throws BackendException {
@@ -37,7 +39,8 @@ public class FoundationDBFixedLengthKCVSTest extends KeyColumnValueStoreTest {
         return new OrderedKeyValueStoreManagerAdapter(sm, ImmutableMap.of(storeName, 8));
     }
 
-    @Test @Override
+    @Test
+    @Override
     public void testConcurrentGetSlice() {
 
     }
