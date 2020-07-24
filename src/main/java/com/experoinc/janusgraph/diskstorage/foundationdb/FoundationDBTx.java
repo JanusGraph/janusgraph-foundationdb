@@ -194,7 +194,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             throws PermanentBackendException {
         Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
         final List<Object[]> retries = new CopyOnWriteArrayList<>(queries);
-        final List<CompletableFuture> futures = new LinkedList<>();
+        final List<CompletableFuture<List<KeyValue>>> futures = new LinkedList<>();
         for (int i = 0; i < (maxRuns * 5); i++) {
             for(Object[] obj : retries) {
                 final KVQuery query = (KVQuery) obj[0];
@@ -206,7 +206,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                     futures.add(tx.getRange(start, end, query.getLimit()).asList()
                             .whenComplete((res, th) -> {
                                 if (th == null) {
-                                    retries.remove(query);
+                                    retries.remove(obj);
                                     if (res == null) {
                                         res = Collections.emptyList();
                                     }
@@ -221,7 +221,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 }
             }
         }
-        for (final CompletableFuture future : futures) {
+        for (final CompletableFuture<List<KeyValue>> future : futures) {
             try {
                 future.get();
             } catch (ExecutionException ee) {
