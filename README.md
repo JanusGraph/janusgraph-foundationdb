@@ -1,5 +1,13 @@
 # FoundationDB Storage Adapter for JanusGraph
 
+[![Downloads][downloads-shield]][downloads-link]
+[![Build Status][travis-shield]][travis-link]
+
+[travis-shield]: https://travis-ci.org/JanusGraph/janusgraph-foundationdb.svg?branch=master
+[travis-link]: https://travis-ci.org/JanusGraph/janusgraph-foundationdb
+[downloads-shield]: https://img.shields.io/github/downloads/JanusGraph/janusgraph-foundationdb/total.svg
+[downloads-link]: https://github.com/JanusGraph/janusgraph-foundationdb/releases
+
 [JanusGraph](http://janusgraph.org) is an [Apache TinkerPop](http://tinkerpop.apache.org) enabled graph database that supports a variety of storage and indexing backends. This project adds [FoundationDB](http://foundationdb.org) to the supported list of backends. FoundationDB is a distributed, ACID key-value store.
 
 # Features
