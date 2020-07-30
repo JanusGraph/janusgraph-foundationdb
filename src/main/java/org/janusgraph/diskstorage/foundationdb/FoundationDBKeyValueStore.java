@@ -22,7 +22,6 @@ import org.janusgraph.diskstorage.PermanentBackendException;
 import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
-import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeySelector;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeyValueEntry;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.OrderedKeyValueStore;
 import org.janusgraph.diskstorage.util.RecordIterator;
@@ -31,11 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -45,12 +42,11 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
 
     private static final Logger log = LoggerFactory.getLogger(FoundationDBKeyValueStore.class);
 
-    private static final StaticBuffer.Factory<byte[]> ENTRY_FACTORY = (array, offset, limit) -> {
+    static final StaticBuffer.Factory<byte[]> ENTRY_FACTORY = (array, offset, limit) -> {
         final byte[] bArray = new byte[limit - offset];
         System.arraycopy(array, offset, bArray, 0, limit - offset);
         return bArray;
     };
-
 
     private final DirectorySubspace db;
     private final String name;
@@ -123,93 +119,56 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
     public RecordIterator<KeyValueEntry> getSlice(KVQuery query, StoreTransaction txh) throws BackendException {
         log.trace("beginning db={}, op=getSlice, tx={}", name, txh);
         final FoundationDBTx tx = getTransaction(txh);
-        final StaticBuffer keyStart = query.getStart();
-        final StaticBuffer keyEnd = query.getEnd();
-        final KeySelector selector = query.getKeySelector();
-        final List<KeyValueEntry> result = new ArrayList<>();
-        final byte[] foundKey = db.pack(keyStart.as(ENTRY_FACTORY));
-        final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
 
-        try {
-            final List<KeyValue> results = tx.getRange(foundKey, endKey, query.getLimit());
+        final List<KeyValue> result = tx.getRange(new FoundationDBRangeQuery(db, query));
+        if (result != null) {
 
-            for (final KeyValue keyValue : results) {
-                StaticBuffer key = getBuffer(db.unpack(keyValue.getKey()).getBytes(0));
-                if (selector.include(key))
-                    result.add(new KeyValueEntry(key, getBuffer(keyValue.getValue())));
-            }
-        } catch (Exception e) {
-            throw new PermanentBackendException(e);
+            // only take KV pairs that match the KeySelector rules
+            result.removeIf(kv -> {
+                StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
+                return !query.getKeySelector().include(key);
+            });
         }
 
         log.trace("db={}, op=getSlice, tx={}, resultcount={}", name, txh, result.size());
-
-        return new FoundationDBRecordIterator(result);
-    }
-
-
-
-    private class FoundationDBRecordIterator implements RecordIterator<KeyValueEntry> {
-        private final Iterator<KeyValueEntry> entries;
-
-        public FoundationDBRecordIterator(final List<KeyValueEntry> result) {
-              this.entries = result.iterator();
-        }
-
-        @Override
-        public boolean hasNext() {
-            return entries.hasNext();
-        }
-
-        @Override
-        public KeyValueEntry next() {
-            return entries.next();
-        }
-
-        @Override
-        public void close() {
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
+        return new FoundationDBRecordIterator(db, result);
     }
 
     @Override
     public Map<KVQuery,RecordIterator<KeyValueEntry>> getSlices(List<KVQuery> queries, StoreTransaction txh) throws BackendException {
         log.trace("beginning db={}, op=getSlice, tx={}", name, txh);
         FoundationDBTx tx = getTransaction(txh);
-        final Map<KVQuery, RecordIterator<KeyValueEntry>> resultMap = new ConcurrentHashMap<>();
-        final List<CompletableFuture<Void>> futures = new ArrayList<>();
+        final Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
+        final Map<KVQuery, FoundationDBRangeQuery> fdbQueries = new ConcurrentHashMap<>();
 
-        try {
-            final List<Object[]> preppedQueries = new LinkedList<>();
-            for (final KVQuery query : queries) {
-                final StaticBuffer keyStart = query.getStart();
-                final StaticBuffer keyEnd = query.getEnd();
-                final KeySelector selector = query.getKeySelector();
-                final byte[] foundKey = db.pack(keyStart.as(ENTRY_FACTORY));
-                final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
-                preppedQueries.add(new Object[]{query, foundKey, endKey});
-            }
-            final Map<KVQuery, List<KeyValue>> result = tx.getMultiRange(preppedQueries);
-
-            for (Map.Entry<KVQuery, List<KeyValue>> entry : result.entrySet()) {
-                final List<KeyValueEntry> results = new ArrayList<>();
-                for (final KeyValue keyValue : entry.getValue()) {
-                final StaticBuffer key = getBuffer(db.unpack(keyValue.getKey()).getBytes(0));
-                if (entry.getKey().getKeySelector().include(key))
-                    results.add(new KeyValueEntry(key, getBuffer(keyValue.getValue())));
-                }
-                resultMap.put(entry.getKey(), new FoundationDBRecordIterator(results));
-
-            }
-        } catch (Exception e) {
-            throw new PermanentBackendException(e);
+        for (final KVQuery q : queries) {
+            resultMap.put(q, new ArrayList<>());
+            fdbQueries.put(q, new FoundationDBRangeQuery(db, q));
         }
 
-        return resultMap;
+        final Map<KVQuery, List<KeyValue>> unfilteredResultMap = tx.getMultiRange(fdbQueries.values());
+
+        for (Map.Entry<KVQuery, List<KeyValue>> currentUnfilteredResultMap : unfilteredResultMap.entrySet()) {
+            KVQuery currentQuery = currentUnfilteredResultMap.getKey();
+            List<KeyValue> currentUnfilteredResult = currentUnfilteredResultMap.getValue();
+
+            if (currentUnfilteredResult != null) {
+                // only take KV pairs that match the KeySelector rules
+                for (final KeyValue kv : currentUnfilteredResult) {
+                    StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
+                    if (currentQuery.getKeySelector().include(key)) {
+                        resultMap.get(currentQuery).add(kv);
+                    }
+                }
+            }
+        }
+
+        final Map<KVQuery, RecordIterator<KeyValueEntry>> iteratorMap = new HashMap<>();
+        for (Map.Entry<KVQuery, List<KeyValue>> kv : resultMap.entrySet()) {
+            iteratorMap.put(kv.getKey(), new FoundationDBRecordIterator(db, kv.getValue()));
+        }
+
+        return iteratorMap;
     }
 
     public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh) throws BackendException {
@@ -223,7 +182,6 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         }
     }
 
-
     @Override
     public void delete(StaticBuffer key, StoreTransaction txh) throws BackendException {
         log.trace("Deletion");
@@ -236,7 +194,7 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         }
     }
 
-    private static StaticBuffer getBuffer(byte[] entry) {
+    static StaticBuffer getBuffer(byte[] entry) {
         return new StaticArrayBuffer(entry);
     }
 }
