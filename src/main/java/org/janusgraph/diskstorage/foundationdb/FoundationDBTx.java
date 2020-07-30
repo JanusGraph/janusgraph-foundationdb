@@ -147,36 +147,26 @@ public class FoundationDBTx extends AbstractStoreTransaction {
     }
 
     public byte[] get(final byte[] key) throws PermanentBackendException {
-        boolean failing = true;
-        byte[] value = null;
         for (int i = 0; i < maxRuns; i++) {
             try {
-                value = this.tx.get(key).get();
-                failing = false;
-                break;
+                return this.tx.get(key).get();
             } catch (ExecutionException e) {
                 this.restart();
             } catch (Exception e) {
                 throw new PermanentBackendException(e);
             }
         }
-        if (failing) {
-            throw new PermanentBackendException("Max transaction reset count exceeded");
-        }
-        return value;
+
+        throw new PermanentBackendException("Max transaction reset count exceeded");
     }
 
     public List<KeyValue> getRange(final byte[] startKey, final byte[] endKey,
                                             final int limit) throws PermanentBackendException {
-        boolean failing = true;
-        List<KeyValue> result = Collections.emptyList();
         for (int i = 0; i < maxRuns; i++) {
             final int startTxId = txCtr.get();
             try {
-                result = tx.getRange(new Range(startKey, endKey), limit).asList().get();
-                if (result == null) return Collections.emptyList();
-                failing = false;
-                break;
+                List<KeyValue> result = tx.getRange(new Range(startKey, endKey), limit).asList().get();
+                return result != null ? result : Collections.emptyList();
             } catch (ExecutionException e) {
                 if (txCtr.get() == startTxId)
                     this.restart();
@@ -184,10 +174,8 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 throw new PermanentBackendException(e);
             }
         }
-        if (failing) {
-            throw new PermanentBackendException("Max transaction reset count exceeded");
-        }
-        return result;
+
+        throw new PermanentBackendException("Max transaction reset count exceeded");
     }
 
     public synchronized  Map<KVQuery, List<KeyValue>> getMultiRange(final List<Object[]> queries)
