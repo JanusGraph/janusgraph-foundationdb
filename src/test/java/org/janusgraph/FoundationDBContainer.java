@@ -3,6 +3,8 @@ package org.janusgraph;
 import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.CLUSTER_FILE_PATH;
 import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.DIRECTORY;
 import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.ISOLATION_LEVEL;
+import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.GET_RANGE_MODE;
+import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.VERSION;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DROP_ON_CLEAR;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_BACKEND;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.buildGraphConfiguration;
@@ -83,7 +85,9 @@ public class FoundationDBContainer extends FixedHostPortGenericContainer<Foundat
             .set(DIRECTORY, graphName)
             .set(DROP_ON_CLEAR, false)
             .set(CLUSTER_FILE_PATH, "target/test-classes/fdb/fdb.cluster")
-            .set(ISOLATION_LEVEL, "read_committed_with_write");
+            .set(ISOLATION_LEVEL, "read_committed_with_write")
+            .set(GET_RANGE_MODE, "iterator")
+            .set(VERSION, 620);
     }
 
     public WriteConfiguration getFoundationDBGraphConfiguration() {

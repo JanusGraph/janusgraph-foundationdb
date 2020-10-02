@@ -14,7 +14,9 @@
 
 package org.janusgraph.diskstorage.foundationdb;
 
+import com.apple.foundationdb.FDBException;
 import com.apple.foundationdb.KeyValue;
+import com.apple.foundationdb.async.AsyncIterator;
 import com.apple.foundationdb.directory.DirectorySubspace;
 import com.google.common.base.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
@@ -32,11 +34,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
@@ -98,7 +98,14 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
                 return null;
             }
         } catch (Exception e) {
-            throw new PermanentBackendException(e);
+            log.error ("db={}, op=get, tx={} with exception", name, txh, e);
+
+            if (e instanceof BackendException) {
+                throw e;
+            }
+            else {
+                throw new PermanentBackendException(e);
+            }
         }
     }
 
@@ -121,7 +128,16 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
 
     @Override
     public RecordIterator<KeyValueEntry> getSlice(KVQuery query, StoreTransaction txh) throws BackendException {
+        if (manager.getMode() == FoundationDBStoreManager.NON_ASYNC) {
+            return getSliceNonAsync(query, txh);
+        } else {
+            return getSliceAsync(query, txh);
+        }
+    }
+
+    public RecordIterator<KeyValueEntry> getSliceNonAsync(KVQuery query, StoreTransaction txh) throws BackendException {
         log.trace("beginning db={}, op=getSlice, tx={}", name, txh);
+
         final FoundationDBTx tx = getTransaction(txh);
         final StaticBuffer keyStart = query.getStart();
         final StaticBuffer keyEnd = query.getEnd();
@@ -139,15 +155,43 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
                     result.add(new KeyValueEntry(key, getBuffer(keyValue.getValue())));
             }
         } catch (Exception e) {
-            throw new PermanentBackendException(e);
+            log.error("db={}, op=getSliceNonAsync, tx={} with exception", name, txh, e);
+
+            if (e instanceof BackendException) {
+                throw e;
+            }
+            else {
+                throw new PermanentBackendException(e);
+            }
         }
 
-        log.trace("db={}, op=getSlice, tx={}, resultcount={}", name, txh, result.size());
+        log.trace("db={}, op=getSliceNonAsync, tx={}, result-count={}", name, txh, result.size());
 
         return new FoundationDBRecordIterator(result);
     }
 
 
+    public RecordIterator<KeyValueEntry> getSliceAsync(KVQuery query, StoreTransaction txh) throws BackendException {
+
+        log.trace("db={}, op=getSliceAsync, tx={}", name, txh);
+
+        final FoundationDBTx tx = getTransaction(txh);
+        final StaticBuffer keyStart = query.getStart();
+        final StaticBuffer keyEnd = query.getEnd();
+        final byte[] foundKey = db.pack(keyStart.as(ENTRY_FACTORY));
+        final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
+
+        try {
+            final AsyncIterator<KeyValue> result = tx.getRangeIter(foundKey, endKey, query.getLimit());
+
+            return new FoundationDBRecordIteratorForAsync(tx, foundKey, endKey, query.getLimit(), result,
+                    query.getKeySelector());
+        } catch (Exception e) {
+           log.error("getSliceAsync db=%s, tx=%s with exception", name, txh, e);
+
+           throw new PermanentBackendException(e);
+        }
+    }
 
     private class FoundationDBRecordIterator implements RecordIterator<KeyValueEntry> {
         private final Iterator<KeyValueEntry> entries;
@@ -176,19 +220,130 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         }
     }
 
+    private class FoundationDBRecordIteratorForAsync implements RecordIterator<KeyValueEntry> {
+        private final FoundationDBTx tx;
+        private AsyncIterator<KeyValue> entries;
+        private final KeySelector selector;
+        KeyValue nextKeyValue = null;
+
+        private final byte[] startKey;
+        private final byte[] endKey;
+        private final int limit;
+        private int fetched;
+
+        protected static final int TRANSACTION_TOO_OLD_CODE = 1007;
+
+        public FoundationDBRecordIteratorForAsync(FoundationDBTx tx,
+                                                  byte[] startKey, byte[] endKey,
+                                                  int limit, final AsyncIterator<KeyValue> result,
+                                                  KeySelector selector) {
+            this.tx = tx;
+            this.entries = result;
+            this.selector = selector;
+            this.startKey = startKey;
+            this.endKey = endKey;
+            this.limit = limit;
+            this.fetched = 0;
+        }
+
+        @Override
+        public boolean hasNext() {
+            fetchNext();
+            return (nextKeyValue != null);
+        }
+
+        @Override
+        public KeyValueEntry next() {
+            if (hasNext()) {
+                KeyValue kv = nextKeyValue;
+                nextKeyValue = null;
+                StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
+                return new KeyValueEntry(key, getBuffer(kv.getValue()));
+            } else {
+                throw new IllegalStateException("does not have any key-value to retrieve");
+            }
+        }
+
+        private FDBException unwrapException(Throwable err) {
+            Throwable curr = err;
+            while (curr != null && !(curr instanceof FDBException))  {
+                curr = curr.getCause();
+            }
+            if (curr != null) {
+                return (FDBException) curr;
+            } else {
+                return null;
+            }
+        }
+
+        private void fetchNext() {
+            while (true) {
+                try {
+                    while (nextKeyValue == null && entries.hasNext()) {
+                        KeyValue kv = entries.next();
+                        fetched++;
+                        StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
+                        if (selector.include(key)) {
+                            nextKeyValue = kv;
+                        }
+                    }
+                    break;
+                } catch (RuntimeException e) {
+
+                    log.info("current async iterator canceled and current transaction could be re-started when conditions meet.");
+                    entries.cancel();
+
+                    Throwable t = e.getCause();
+                    FDBException fdbException = unwrapException(t);
+                    // Capture the transaction too old error
+                    if (tx.getIsolationLevel() != FoundationDBTx.IsolationLevel.SERIALIZABLE &&
+                            fdbException != null && (fdbException.getCode() == TRANSACTION_TOO_OLD_CODE)) {
+                        tx.restart();
+                        entries = tx.getRangeIter(startKey, endKey, limit, fetched);
+                    } else {
+                        log.error("The throwable is not restartable", t);
+                        throw e;
+                    }
+                }
+                catch (Exception e) {
+                    log.error("AsyncIterator fetchNext() encountered exception", e);
+                    throw e;
+                }
+            }
+        }
+
+        @Override
+        public void close() {
+            entries.cancel();
+        }
+
+        @Override
+        public void remove() {
+            entries.remove();
+        }
+    }
+
+
     @Override
     public Map<KVQuery,RecordIterator<KeyValueEntry>> getSlices(List<KVQuery> queries, StoreTransaction txh) throws BackendException {
-        log.trace("beginning db={}, op=getSlice, tx={}", name, txh);
+        if (manager.getMode() == FoundationDBStoreManager.NON_ASYNC) {
+            return getSlicesNonAsync(queries, txh);
+        } else {
+            return getSlicesAsync(queries, txh);
+        }
+    }
+
+    public Map<KVQuery,RecordIterator<KeyValueEntry>> getSlicesNonAsync (List<KVQuery> queries, StoreTransaction txh) throws BackendException {
+        log.trace("beginning db={}, op=getSlicesNonAsync, tx={}", name, txh);
         FoundationDBTx tx = getTransaction(txh);
-        final Map<KVQuery, RecordIterator<KeyValueEntry>> resultMap = new ConcurrentHashMap<>();
-        final List<CompletableFuture<Void>> futures = new ArrayList<>();
+        final Map<KVQuery, RecordIterator<KeyValueEntry>> resultMap = new HashMap<>();
+        final int totalNumberOfQueries = queries.size();
 
         try {
-            final List<Object[]> preppedQueries = new LinkedList<>();
+            final List<Object[]> preppedQueries = new ArrayList<>(totalNumberOfQueries);
             for (final KVQuery query : queries) {
                 final StaticBuffer keyStart = query.getStart();
                 final StaticBuffer keyEnd = query.getEnd();
-                final KeySelector selector = query.getKeySelector();
                 final byte[] foundKey = db.pack(keyStart.as(ENTRY_FACTORY));
                 final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
                 preppedQueries.add(new Object[]{query, foundKey, endKey});
@@ -206,8 +361,44 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
 
             }
         } catch (Exception e) {
+            log.error("db={}, op=getSlicesNonAsync, tx={} throws exception", name, txh, e);
+
+            if (e instanceof BackendException) {
+                throw e;
+            }
+            else {
+                throw new PermanentBackendException(e);
+            }
+        }
+
+        return resultMap;
+    }
+
+
+    public Map<KVQuery,RecordIterator<KeyValueEntry>> getSlicesAsync(List<KVQuery> queries, StoreTransaction txh) throws BackendException {
+        //record the total number of sizes
+        log.trace("beginning db={}, op=getSlicesAsync, tx={}", name, txh);
+
+        FoundationDBTx tx = getTransaction(txh);
+        final Map<KVQuery, RecordIterator<KeyValueEntry>> resultMap = new HashMap<>();
+
+        try {
+            for (final KVQuery query : queries) {
+                final StaticBuffer keyStart = query.getStart();
+                final StaticBuffer keyEnd = query.getEnd();
+                final byte[] foundKey = db.pack(keyStart.as(ENTRY_FACTORY));
+                final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
+
+                AsyncIterator<KeyValue> result = tx.getRangeIter(foundKey, endKey, query.getLimit());
+                resultMap.put(query, new FoundationDBRecordIteratorForAsync(tx, foundKey, endKey,
+                        query.getLimit(), result, query.getKeySelector()));
+            }
+        } catch (Exception e) {
+            log.error("db={}, getSlicesAsync, tx= {} with exception", name, txh, e);
+
             throw new PermanentBackendException(e);
         }
+
 
         return resultMap;
     }
@@ -219,6 +410,7 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
             log.trace("db={}, op=insert, tx={}", name, txh);
             tx.set(db.pack(key.as(ENTRY_FACTORY)), value.as(ENTRY_FACTORY));
         } catch (Exception e) {
+            log.error ("db={}, op=insert, tx={} with exception", name, txh, e);
             throw new PermanentBackendException(e);
         }
     }
@@ -226,12 +418,12 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
 
     @Override
     public void delete(StaticBuffer key, StoreTransaction txh) throws BackendException {
-        log.trace("Deletion");
         FoundationDBTx tx = getTransaction(txh);
         try {
             log.trace("db={}, op=delete, tx={}", name, txh);
             tx.clear(db.pack(key.as(ENTRY_FACTORY)));
         } catch (Exception e) {
+            log.error("db={}, op=delete, tx={} with exception", name, txh, e);
             throw new PermanentBackendException(e);
         }
     }

@@ -19,6 +19,8 @@
         <test.skip.default>false</test.skip.default>
         <test.skip.tp>true</test.skip.tp>
         <testcontainers.version>1.14.3</testcontainers.version>
+        <log4j.version>1.2.16</log4j.version>
+        <slf4j.version>1.7.12</slf4j.version>
     </properties>
 
     <developers>
@@ -70,6 +72,23 @@
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
+
+       <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
+            <!-- <optional>true</optional> -->
+            <!-- <scope>provided</scope> -->
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+            <!-- <optional>true</optional> -->
+            <!-- <scope>provided</scope> -->
+        </dependency>
+
     </dependencies>
 
     <build>
