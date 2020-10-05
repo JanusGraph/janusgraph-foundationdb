@@ -2,7 +2,6 @@ package org.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.Database;
 import com.apple.foundationdb.KeyValue;
-import com.apple.foundationdb.Range;
 import com.apple.foundationdb.Transaction;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
@@ -12,6 +11,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -160,12 +160,11 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         throw new PermanentBackendException("Max transaction reset count exceeded");
     }
 
-    public List<KeyValue> getRange(final byte[] startKey, final byte[] endKey,
-                                            final int limit) throws PermanentBackendException {
+    public List<KeyValue> getRange(final FoundationDBRangeQuery query) throws PermanentBackendException {
         for (int i = 0; i < maxRuns; i++) {
             final int startTxId = txCtr.get();
             try {
-                List<KeyValue> result = tx.getRange(new Range(startKey, endKey), limit).asList().get();
+                List<KeyValue> result = tx.getRange(query.getStartKeySelector(), query.getEndKeySelector(), query.getLimit()).asList().get();
                 return result != null ? result : Collections.emptyList();
             } catch (ExecutionException e) {
                 if (txCtr.get() == startTxId)
@@ -178,23 +177,21 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         throw new PermanentBackendException("Max transaction reset count exceeded");
     }
 
-    public synchronized  Map<KVQuery, List<KeyValue>> getMultiRange(final List<Object[]> queries)
+    public synchronized Map<KVQuery, List<KeyValue>> getMultiRange(final Collection<FoundationDBRangeQuery> queries)
             throws PermanentBackendException {
         Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
-        final List<Object[]> retries = new CopyOnWriteArrayList<>(queries);
+        final List<FoundationDBRangeQuery> retries = new CopyOnWriteArrayList<>(queries);
         final List<CompletableFuture<List<KeyValue>>> futures = new LinkedList<>();
         for (int i = 0; i < (maxRuns * 5); i++) {
-            for(Object[] obj : retries) {
-                final KVQuery query = (KVQuery) obj[0];
-                final byte[] start = (byte[]) obj[1];
-                final byte[] end = (byte[]) obj[2];
+            for(FoundationDBRangeQuery q : retries) {
+                final KVQuery query = q.asKVQuery();
 
                 final int startTxId = txCtr.get();
                 try {
-                    futures.add(tx.getRange(start, end, query.getLimit()).asList()
+                    futures.add(tx.getRange(q.getStartKeySelector(), q.getEndKeySelector(), query.getLimit()).asList()
                             .whenComplete((res, th) -> {
                                 if (th == null) {
-                                    retries.remove(obj);
+                                    retries.remove(q);
                                     if (res == null) {
                                         res = Collections.emptyList();
                                     }
