@@ -60,8 +60,8 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
 
     private static final Logger log = LoggerFactory.getLogger(FoundationDBStoreManager.class);
 
-    public static final int ASYNC = 0, NON_ASYNC = 1;
-    private int mode;
+    public enum RangeQueryIteratorMode { ASYNC, SYNC };
+    private RangeQueryIteratorMode mode;
 
     private final Map<String, FoundationDBKeyValueStore> stores;
 
@@ -102,13 +102,13 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
         final String getRangeMode = configuration.get(GET_RANGE_MODE);
         switch (getRangeMode.toLowerCase().trim()) {
             case "iterator":
-                mode = ASYNC;
+                mode = RangeQueryIteratorMode.ASYNC;
                 break;
             case "list":
-                mode = NON_ASYNC;
+                mode = RangeQueryIteratorMode.SYNC;
                 break;
         }
-        log.info("GetRange mode is set to {}, code is {}", getRangeMode, mode);
+        log.info("GetRange mode is specified as: {}, record iterator is with: {}", getRangeMode, mode.toString());
 
 
         initialize(rootDirectoryName);
@@ -171,7 +171,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
         }
         try {
             final DirectorySubspace storeDb = rootDirectory.createOrOpen(db, PathUtil.from(name)).get();
-            log.debug("Opened database {}", name, new Throwable());
+            log.debug("Opened database {}", name /*, new Throwable()*/);
 
             FoundationDBKeyValueStore store = new FoundationDBKeyValueStore(name, storeDb, this);
             stores.put(name, store);
@@ -212,20 +212,17 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
                 }
             }
         }
-        catch (Exception ex) {
-
-            if (ex instanceof BackendException) {
-                throw (BackendException)ex;
-            }
-            else {
-                throw new PermanentBackendException( ex);
-            }
+        catch (BackendException e){
+            throw e;
+        }
+        catch (Exception e) {
+            throw new PermanentBackendException(e);
         }
     }
 
     void removeDatabase(FoundationDBKeyValueStore db) {
         if (!stores.containsKey(db.getName())) {
-            throw new IllegalArgumentException("Tried to remove an unkown database from the storage manager");
+            throw new IllegalArgumentException("Tried to remove an unknown database from the storage manager");
         }
         String name = db.getName();
         stores.remove(name);
@@ -240,10 +237,10 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
                 throw new IllegalStateException("Cannot shutdown manager since some databases are still open");
             try {
                 // TODO this looks like a race condition
-                //Wait just a little bit before closing so that independent transaction threads can clean up.
+                // Wait just a little bit before closing so that independent transaction threads can clean up.
                 Thread.sleep(30);
             } catch (InterruptedException e) {
-                //Ignore
+                // Ignore
             }
             try {
                 db.close();
@@ -301,7 +298,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
         return config.get(VERSION);
     }
 
-    public int getMode() {
+    public RangeQueryIteratorMode getMode() {
         return mode;
     }
 }

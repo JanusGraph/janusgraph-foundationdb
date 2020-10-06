@@ -18,62 +18,32 @@ import com.apple.foundationdb.FDBException;
 import com.apple.foundationdb.KeyValue;
 import com.apple.foundationdb.async.AsyncIterator;
 import com.apple.foundationdb.subspace.Subspace;
-import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeySelector;
-import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeyValueEntry;
-import org.janusgraph.diskstorage.util.RecordIterator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FoundationDBRecordIteratorForAsync implements RecordIterator<KeyValueEntry> {
+public class FoundationDBRecordAsyncIterator extends FoundationDBRecordIterator {
 
-    private static final Logger log = LoggerFactory.getLogger(FoundationDBRecordIteratorForAsync.class);
+    private static final Logger log = LoggerFactory.getLogger(FoundationDBRecordAsyncIterator.class);
 
-    private final Subspace ds;
     private final FoundationDBTx tx;
-    private AsyncIterator<KeyValue> entries;
-    private final KeySelector selector;
-    KeyValue nextKeyValue = null;
+    private final FoundationDBRangeQuery rangeQuery;
 
-    private final byte[] startKey;
-    private final byte[] endKey;
-    private final int limit;
-    private int fetched;
+    private AsyncIterator<KeyValue> heldEntries;
 
     protected static final int TRANSACTION_TOO_OLD_CODE = 1007;
 
-    public FoundationDBRecordIteratorForAsync(Subspace ds,
+    public FoundationDBRecordAsyncIterator(Subspace ds,
                                               FoundationDBTx tx,
-                                              byte[] startKey, byte[] endKey,
-                                              int limit, final AsyncIterator<KeyValue> result,
+                                              FoundationDBRangeQuery query,
+                                              final AsyncIterator<KeyValue> result,
                                               KeySelector selector) {
-        this.ds = ds;
+        super (ds, result, selector);
+
         this.tx = tx;
-        this.entries = result;
-        this.selector = selector;
-        this.startKey = startKey;
-        this.endKey = endKey;
-        this.limit = limit;
-        this.fetched = 0;
-    }
-
-    @Override
-    public boolean hasNext() {
-        fetchNext();
-        return (nextKeyValue != null);
-    }
-
-    @Override
-    public KeyValueEntry next() {
-        if (hasNext()) {
-            KeyValue kv = nextKeyValue;
-            nextKeyValue = null;
-            StaticBuffer key = FoundationDBKeyValueStore.getBuffer(ds.unpack(kv.getKey()).getBytes(0));
-            return new KeyValueEntry(key, FoundationDBKeyValueStore.getBuffer(kv.getValue()));
-        } else {
-            throw new IllegalStateException("does not have any key-value to retrieve");
-        }
+        this.rangeQuery = query;
+        this.heldEntries = result;
     }
 
     private FDBException unwrapException(Throwable err) {
@@ -88,22 +58,16 @@ public class FoundationDBRecordIteratorForAsync implements RecordIterator<KeyVal
         }
     }
 
-    private void fetchNext() {
+    @Override
+    protected void fetchNext() {
         while (true) {
             try {
-                while (nextKeyValue == null && entries.hasNext()) {
-                    KeyValue kv = entries.next();
-                    fetched++;
-                    StaticBuffer key = FoundationDBKeyValueStore.getBuffer(ds.unpack(kv.getKey()).getBytes(0));
-                    if (selector.include(key)) {
-                        nextKeyValue = kv;
-                    }
-                }
-                break;
+               super.fetchNext();
+               break;
             } catch (RuntimeException e) {
 
-                log.info("current async iterator canceled and current transaction could be re-started when conditions meet.");
-                entries.cancel();
+                log.info("current async iterator canceled and current transaction could be re-started when conditions meet");
+                heldEntries.cancel();
 
                 Throwable t = e.getCause();
                 FDBException fdbException = unwrapException(t);
@@ -111,7 +75,10 @@ public class FoundationDBRecordIteratorForAsync implements RecordIterator<KeyVal
                 if (tx.getIsolationLevel() != FoundationDBTx.IsolationLevel.SERIALIZABLE &&
                         fdbException != null && (fdbException.getCode() == TRANSACTION_TOO_OLD_CODE)) {
                     tx.restart();
-                    entries = tx.getRangeIter(startKey, endKey, limit, fetched);
+                    heldEntries = tx.getRangeIter(rangeQuery, fetched);
+                    // Initiate record iterator again, but keep cursor "fetched" not changed.
+                    this.entries = heldEntries;
+                    this.nextKeyValueEntry = null;
                 } else {
                     log.error("The throwable is not restartable", t);
                     throw e;
@@ -126,11 +93,11 @@ public class FoundationDBRecordIteratorForAsync implements RecordIterator<KeyVal
 
     @Override
     public void close() {
-        entries.cancel();
+        heldEntries.cancel();
     }
 
     @Override
     public void remove() {
-        entries.remove();
+        heldEntries.remove();
     }
 }

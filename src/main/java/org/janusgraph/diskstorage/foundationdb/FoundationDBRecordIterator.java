@@ -17,32 +17,58 @@ package org.janusgraph.diskstorage.foundationdb;
 import com.apple.foundationdb.KeyValue;
 import com.apple.foundationdb.subspace.Subspace;
 import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeySelector;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeyValueEntry;
 import org.janusgraph.diskstorage.util.RecordIterator;
 
 import java.util.Iterator;
-import java.util.List;
+import java.util.NoSuchElementException;
 
 public class FoundationDBRecordIterator implements RecordIterator<KeyValueEntry> {
-    private final Subspace ds;
-    private final Iterator<KeyValue> entries;
+    protected final Subspace ds;
+    protected Iterator<KeyValue> entries;
+    protected final KeySelector selector;
+    // Keeping track of the entries being scanned, which is different from the selected entries returned to the caller
+    // due to selector
+    protected int fetched;
+    protected KeyValueEntry nextKeyValueEntry;
 
-    public FoundationDBRecordIterator(Subspace ds, final List<KeyValue> result) {
+    public FoundationDBRecordIterator(Subspace ds, final Iterator<KeyValue> keyValues, KeySelector selector) {
         this.ds = ds;
-        this.entries = result.iterator();
+        this.selector = selector;
+
+        entries = keyValues;
+        fetched = 0;
+        nextKeyValueEntry = null;
     }
 
     @Override
     public boolean hasNext() {
-        return entries.hasNext();
+        fetchNext();
+        return (nextKeyValueEntry != null);
     }
 
     @Override
     public KeyValueEntry next() {
-        KeyValue nextKV = entries.next();
-        StaticBuffer key = FoundationDBKeyValueStore.getBuffer(ds.unpack(nextKV.getKey()).getBytes(0));
-        StaticBuffer value = FoundationDBKeyValueStore.getBuffer(nextKV.getValue());
-        return new KeyValueEntry(key, value);
+        if (hasNext()) {
+            KeyValueEntry result = nextKeyValueEntry;
+            nextKeyValueEntry = null;
+            return result;
+        }
+        else {
+            throw new NoSuchElementException();
+        }
+    }
+
+    protected void fetchNext() {
+        while (nextKeyValueEntry == null && entries.hasNext()) {
+            KeyValue kv = entries.next();
+            fetched++;
+            StaticBuffer key = FoundationDBKeyValueStore.getBuffer(ds.unpack(kv.getKey()).getBytes(0));
+            if (selector.include(key)) {
+                nextKeyValueEntry = new KeyValueEntry (key, FoundationDBKeyValueStore.getBuffer(kv.getValue()));
+            }
+        }
     }
 
     @Override
