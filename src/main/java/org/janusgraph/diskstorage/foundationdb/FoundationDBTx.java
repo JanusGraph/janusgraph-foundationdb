@@ -1,6 +1,7 @@
 package org.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.Database;
+import com.apple.foundationdb.KeyValue;
 import com.apple.foundationdb.Transaction;
 import com.apple.foundationdb.FDBException;
 import com.apple.foundationdb.Range;
@@ -16,9 +17,11 @@ import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Map;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
@@ -297,8 +300,8 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         return value;
     }
 
-    public List<KeyValue> getRange(final byte[] startKey, final byte[] endKey,
-                                            final int limit) throws PermanentBackendException {
+
+    public List<KeyValue> getRange(final FoundationDBRangeQuery query) throws PermanentBackendException {
         boolean failing = true;
         List<KeyValue> result = Collections.emptyList();
         Exception lastException = null;
@@ -306,7 +309,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         for (int i = 0; i < maxRuns; i++) {
             final int startTxId = txCtr.get();
             try {
-                result = tx.getRange(new Range(startKey, endKey), limit).asList().get();
+                result = tx.getRange(query.getStartKeySelector(), query.getEndKeySelector(), query.getLimit()).asList().get();
                 if (result == null) return Collections.emptyList();
                 failing = false;
                 break;
@@ -361,7 +364,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         return tx.getRange(begin, end, limit-skip, false, StreamingMode.WANT_ALL).iterator();
     }
 
-    public synchronized  Map<KVQuery, List<KeyValue>> getMultiRange(final List<Object[]> queries)
+    public synchronized Map<KVQuery, List<KeyValue>> getMultiRange(final Collection<FoundationDBRangeQuery> queries)
             throws PermanentBackendException {
         Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
         final List<Object[]> retries = new CopyOnWriteArrayList<>(queries);
@@ -396,7 +399,6 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
                                     log.debug("(after) get range succeeded with current size of retries: {}, thread id: {}, tx id: {}",
                                             retries.size(), Thread.currentThread().getId(), transactionId);
-
 
                                     if (res == null) {
                                         res = Collections.emptyList();

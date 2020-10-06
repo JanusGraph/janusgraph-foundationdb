@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
@@ -45,12 +47,11 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
 
     private static final Logger log = LoggerFactory.getLogger(FoundationDBKeyValueStore.class);
 
-    private static final StaticBuffer.Factory<byte[]> ENTRY_FACTORY = (array, offset, limit) -> {
+    static final StaticBuffer.Factory<byte[]> ENTRY_FACTORY = (array, offset, limit) -> {
         final byte[] bArray = new byte[limit - offset];
         System.arraycopy(array, offset, bArray, 0, limit - offset);
         return bArray;
     };
-
 
     private final DirectorySubspace db;
     private final String name;
@@ -139,21 +140,22 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         log.trace("beginning db={}, op=getSlice, tx={}", name, txh);
 
         final FoundationDBTx tx = getTransaction(txh);
-        final StaticBuffer keyStart = query.getStart();
-        final StaticBuffer keyEnd = query.getEnd();
-        final KeySelector selector = query.getKeySelector();
-        final List<KeyValueEntry> result = new ArrayList<>();
-        final byte[] foundKey = db.pack(keyStart.as(ENTRY_FACTORY));
-        final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
 
         try {
-            final List<KeyValue> results = tx.getRange(foundKey, endKey, query.getLimit());
+            final List<KeyValue> result = tx.getRange(new FoundationDBRangeQuery(db, query));
+            if (result != null) {
 
-            for (final KeyValue keyValue : results) {
-                StaticBuffer key = getBuffer(db.unpack(keyValue.getKey()).getBytes(0));
-                if (selector.include(key))
-                    result.add(new KeyValueEntry(key, getBuffer(keyValue.getValue())));
+                // only take KV pairs that match the KeySelector rules
+                result.removeIf(kv -> {
+                    StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
+                    return !query.getKeySelector().include(key);
+                });
             }
+
+            log.trace("db={}, op=getSliceNonAsync, tx={}, result-count={}", name, txh, result.size());
+
+            return new FoundationDBRecordIterator(db, result);
+
         } catch (Exception e) {
             log.error("db={}, op=getSliceNonAsync, tx={} with exception", name, txh, e);
 
@@ -164,10 +166,6 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
                 throw new PermanentBackendException(e);
             }
         }
-
-        log.trace("db={}, op=getSliceNonAsync, tx={}, result-count={}", name, txh, result.size());
-
-        return new FoundationDBRecordIterator(result);
     }
 
 
@@ -184,142 +182,13 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         try {
             final AsyncIterator<KeyValue> result = tx.getRangeIter(foundKey, endKey, query.getLimit());
 
-            return new FoundationDBRecordIteratorForAsync(tx, foundKey, endKey, query.getLimit(), result,
+            return new FoundationDBRecordIteratorForAsync(
+                    db, tx, foundKey, endKey, query.getLimit(), result,
                     query.getKeySelector());
         } catch (Exception e) {
            log.error("getSliceAsync db=%s, tx=%s with exception", name, txh, e);
 
            throw new PermanentBackendException(e);
-        }
-    }
-
-    private class FoundationDBRecordIterator implements RecordIterator<KeyValueEntry> {
-        private final Iterator<KeyValueEntry> entries;
-
-        public FoundationDBRecordIterator(final List<KeyValueEntry> result) {
-              this.entries = result.iterator();
-        }
-
-        @Override
-        public boolean hasNext() {
-            return entries.hasNext();
-        }
-
-        @Override
-        public KeyValueEntry next() {
-            return entries.next();
-        }
-
-        @Override
-        public void close() {
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    private class FoundationDBRecordIteratorForAsync implements RecordIterator<KeyValueEntry> {
-        private final FoundationDBTx tx;
-        private AsyncIterator<KeyValue> entries;
-        private final KeySelector selector;
-        KeyValue nextKeyValue = null;
-
-        private final byte[] startKey;
-        private final byte[] endKey;
-        private final int limit;
-        private int fetched;
-
-        protected static final int TRANSACTION_TOO_OLD_CODE = 1007;
-
-        public FoundationDBRecordIteratorForAsync(FoundationDBTx tx,
-                                                  byte[] startKey, byte[] endKey,
-                                                  int limit, final AsyncIterator<KeyValue> result,
-                                                  KeySelector selector) {
-            this.tx = tx;
-            this.entries = result;
-            this.selector = selector;
-            this.startKey = startKey;
-            this.endKey = endKey;
-            this.limit = limit;
-            this.fetched = 0;
-        }
-
-        @Override
-        public boolean hasNext() {
-            fetchNext();
-            return (nextKeyValue != null);
-        }
-
-        @Override
-        public KeyValueEntry next() {
-            if (hasNext()) {
-                KeyValue kv = nextKeyValue;
-                nextKeyValue = null;
-                StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
-                return new KeyValueEntry(key, getBuffer(kv.getValue()));
-            } else {
-                throw new IllegalStateException("does not have any key-value to retrieve");
-            }
-        }
-
-        private FDBException unwrapException(Throwable err) {
-            Throwable curr = err;
-            while (curr != null && !(curr instanceof FDBException))  {
-                curr = curr.getCause();
-            }
-            if (curr != null) {
-                return (FDBException) curr;
-            } else {
-                return null;
-            }
-        }
-
-        private void fetchNext() {
-            while (true) {
-                try {
-                    while (nextKeyValue == null && entries.hasNext()) {
-                        KeyValue kv = entries.next();
-                        fetched++;
-                        StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
-                        if (selector.include(key)) {
-                            nextKeyValue = kv;
-                        }
-                    }
-                    break;
-                } catch (RuntimeException e) {
-
-                    log.info("current async iterator canceled and current transaction could be re-started when conditions meet.");
-                    entries.cancel();
-
-                    Throwable t = e.getCause();
-                    FDBException fdbException = unwrapException(t);
-                    // Capture the transaction too old error
-                    if (tx.getIsolationLevel() != FoundationDBTx.IsolationLevel.SERIALIZABLE &&
-                            fdbException != null && (fdbException.getCode() == TRANSACTION_TOO_OLD_CODE)) {
-                        tx.restart();
-                        entries = tx.getRangeIter(startKey, endKey, limit, fetched);
-                    } else {
-                        log.error("The throwable is not restartable", t);
-                        throw e;
-                    }
-                }
-                catch (Exception e) {
-                    log.error("AsyncIterator fetchNext() encountered exception", e);
-                    throw e;
-                }
-            }
-        }
-
-        @Override
-        public void close() {
-            entries.cancel();
-        }
-
-        @Override
-        public void remove() {
-            entries.remove();
         }
     }
 
@@ -334,44 +203,39 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
     }
 
     public Map<KVQuery,RecordIterator<KeyValueEntry>> getSlicesNonAsync (List<KVQuery> queries, StoreTransaction txh) throws BackendException {
-        log.trace("beginning db={}, op=getSlicesNonAsync, tx={}", name, txh);
+        log.trace("beginning db={}, op=getSlice, tx={}", name, txh);
         FoundationDBTx tx = getTransaction(txh);
-        final Map<KVQuery, RecordIterator<KeyValueEntry>> resultMap = new HashMap<>();
-        final int totalNumberOfQueries = queries.size();
+        final Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
+        final Map<KVQuery, FoundationDBRangeQuery> fdbQueries = new ConcurrentHashMap<>();
 
-        try {
-            final List<Object[]> preppedQueries = new ArrayList<>(totalNumberOfQueries);
-            for (final KVQuery query : queries) {
-                final StaticBuffer keyStart = query.getStart();
-                final StaticBuffer keyEnd = query.getEnd();
-                final byte[] foundKey = db.pack(keyStart.as(ENTRY_FACTORY));
-                final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
-                preppedQueries.add(new Object[]{query, foundKey, endKey});
-            }
-            final Map<KVQuery, List<KeyValue>> result = tx.getMultiRange(preppedQueries);
+        for (final KVQuery q : queries) {
+            resultMap.put(q, new ArrayList<>());
+            fdbQueries.put(q, new FoundationDBRangeQuery(db, q));
+        }
 
-            for (Map.Entry<KVQuery, List<KeyValue>> entry : result.entrySet()) {
-                final List<KeyValueEntry> results = new ArrayList<>();
-                for (final KeyValue keyValue : entry.getValue()) {
-                final StaticBuffer key = getBuffer(db.unpack(keyValue.getKey()).getBytes(0));
-                if (entry.getKey().getKeySelector().include(key))
-                    results.add(new KeyValueEntry(key, getBuffer(keyValue.getValue())));
+        final Map<KVQuery, List<KeyValue>> unfilteredResultMap = tx.getMultiRange(fdbQueries.values());
+
+        for (Map.Entry<KVQuery, List<KeyValue>> currentUnfilteredResultMap : unfilteredResultMap.entrySet()) {
+            KVQuery currentQuery = currentUnfilteredResultMap.getKey();
+            List<KeyValue> currentUnfilteredResult = currentUnfilteredResultMap.getValue();
+
+            if (currentUnfilteredResult != null) {
+                // only take KV pairs that match the KeySelector rules
+                for (final KeyValue kv : currentUnfilteredResult) {
+                    StaticBuffer key = getBuffer(db.unpack(kv.getKey()).getBytes(0));
+                    if (currentQuery.getKeySelector().include(key)) {
+                        resultMap.get(currentQuery).add(kv);
+                    }
                 }
-                resultMap.put(entry.getKey(), new FoundationDBRecordIterator(results));
-
-            }
-        } catch (Exception e) {
-            log.error("db={}, op=getSlicesNonAsync, tx={} throws exception", name, txh, e);
-
-            if (e instanceof BackendException) {
-                throw e;
-            }
-            else {
-                throw new PermanentBackendException(e);
             }
         }
 
-        return resultMap;
+        final Map<KVQuery, RecordIterator<KeyValueEntry>> iteratorMap = new HashMap<>();
+        for (Map.Entry<KVQuery, List<KeyValue>> kv : resultMap.entrySet()) {
+            iteratorMap.put(kv.getKey(), new FoundationDBRecordIterator(db, kv.getValue()));
+        }
+
+        return iteratorMap;
     }
 
 
@@ -390,7 +254,8 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
                 final byte[] endKey = db.pack(keyEnd.as(ENTRY_FACTORY));
 
                 AsyncIterator<KeyValue> result = tx.getRangeIter(foundKey, endKey, query.getLimit());
-                resultMap.put(query, new FoundationDBRecordIteratorForAsync(tx, foundKey, endKey,
+                resultMap.put(query, new FoundationDBRecordIteratorForAsync(
+                        db, tx, foundKey, endKey,
                         query.getLimit(), result, query.getKeySelector()));
             }
         } catch (Exception e) {
@@ -415,7 +280,6 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         }
     }
 
-
     @Override
     public void delete(StaticBuffer key, StoreTransaction txh) throws BackendException {
         FoundationDBTx tx = getTransaction(txh);
@@ -428,7 +292,7 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         }
     }
 
-    private static StaticBuffer getBuffer(byte[] entry) {
+    static StaticBuffer getBuffer(byte[] entry) {
         return new StaticArrayBuffer(entry);
     }
 }

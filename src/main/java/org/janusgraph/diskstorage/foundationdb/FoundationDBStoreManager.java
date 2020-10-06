@@ -200,7 +200,7 @@ public class FoundationDBStoreManager extends AbstractStoreManager implements Or
                         log.trace("Insertion on {}: {}", mutation.getKey(), entry);
                     }
 
-                    log.debug("Total number of insertinos: {}", mutationValue.getAdditions().size());
+                    log.debug("Total number of insertions: {}", mutationValue.getAdditions().size());
                 }
                 if (mutationValue.hasDeletions()) {
                     for (StaticBuffer del : mutationValue.getDeletions()) {
