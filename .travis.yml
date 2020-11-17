@@ -40,10 +40,18 @@ stages:
 jobs:
   include:
     - stage: test
-      env: ARGS='-Dtest=**/graphdb/**'
+      env: ARGS='-Dgetrangemode=list -Dtest=**/graphdb/**'
       install: mvn clean install -DskipTests=true
       script: mvn install ${ARGS}
     - stage: test
-      env: ARGS='-Dtest=**/diskstorage/foundationdb/*'
+      env: ARGS='-Dgetrangemode=list -Dtest=**/diskstorage/foundationdb/*'
+      install: mvn clean install -DskipTests=true
+      script: mvn install ${ARGS}
+    - stage: test
+      env: ARGS='-Dgetrangemode=iterator -Dtest=**/graphdb/**'
+      install: mvn clean install -DskipTests=true
+      script: mvn install ${ARGS}
+    - stage: test
+      env: ARGS='-Dgetrangemode=iterator -Dtest=**/diskstorage/foundationdb/*'
       install: mvn clean install -DskipTests=true
       script: mvn install ${ARGS}

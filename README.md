@@ -63,6 +63,12 @@ Follow these steps if you'd like to use the latest version built from source.
 |`storage.fdb.version`|The FoundationDB client version.|`5.2.0`|
 |`storage.fdb.cluster-file-path`|The location of the `fdb.cluster` file.|`/etc/foundationdb/fdb.cluster`|
 |`storage.fdb.isolation-level`|The three options are `serializable`, `read_committed_no_write`, and `read_committed_with_write`.|`serializable`|
+|`storage.fdb.get-range-mode`|The two options are `list` and `iterator`.|`list`|
 
 ## Isolation Levels
 FoundationDB provides serializable isolation under a specific set of [constraints](https://apple.github.io/foundationdb/known-limitations.html#current-limitations). Namely transactions will fail if they take longer than 5 seconds or read/write more than 10,000,000 bytes. This adapter allows the user to relax the how JanusGraph uses FoundationDB transactions and to spread a single JanusGraph transaction over more than one FoundationDB transaction. `read_committed_no_write` allows reads to be spread across more than one transasction, but will fail any writes that are attempted outside of the first transaction period. `read_committed_with_write` allows reads and writes to extend over more than one single transaction. If this option is selected, invariants may be broken and the system will behave similarily to an eventually consistent system.
+
+## GetRange Modes
+FoundationDB provides asynchronous iterator for [range query](https://apple.github.io/foundationdb/developer-guide.html#range-reads), with the following advantages compared to synchronous iterator: on-demand data stream pulling, better memory efficiency, and better thread parallelism management to support MultiQuery in JanusGraph. When the `get-range-mode` is chosen with option of `iterator`, asynchronous iterator is turned on. The default option of `get-range-mode` is `list` currently, with which synchronous iterator is chosen.
+
+The `get-range-mode` and the isolation level can be chosen independently in the storage plugin's configuration options. 

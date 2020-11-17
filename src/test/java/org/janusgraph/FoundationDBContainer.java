@@ -3,6 +3,8 @@ package org.janusgraph;
 import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.CLUSTER_FILE_PATH;
 import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.DIRECTORY;
 import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.ISOLATION_LEVEL;
+import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.GET_RANGE_MODE;
+import static org.janusgraph.diskstorage.foundationdb.FoundationDBConfigOptions.VERSION;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DROP_ON_CLEAR;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_BACKEND;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.buildGraphConfiguration;
@@ -17,7 +19,12 @@ import org.testcontainers.containers.Container;
 import org.testcontainers.containers.ContainerLaunchException;
 import org.testcontainers.containers.FixedHostPortGenericContainer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class FoundationDBContainer extends FixedHostPortGenericContainer<FoundationDBContainer> {
+
+    private final Logger log = LoggerFactory.getLogger(FoundationDBContainer.class);
 
     public static final String DEFAULT_IMAGE_AND_TAG = "foundationdb/foundationdb:6.2.20";
     private static final Integer DEFAULT_PORT = 4500;
@@ -49,7 +56,7 @@ public class FoundationDBContainer extends FixedHostPortGenericContainer<Foundat
         try (ServerSocket socket = new ServerSocket(0)) {
             return socket.getLocalPort();
         } catch (Exception e) {
-            System.err.printf("Couldn't open random port, using default port '%d'.", DEFAULT_PORT);
+            log.error("Couldn't open random port, using default port '%d'.", DEFAULT_PORT);
             return DEFAULT_PORT;
         }
     }
@@ -77,13 +84,37 @@ public class FoundationDBContainer extends FixedHostPortGenericContainer<Foundat
         return getFoundationDBConfiguration("janusgraph-test-fdb");
     }
 
+    private String getAndCheckRangeModeFromTestEnvironment() {
+        String mode = System.getProperty("getrangemode");
+        if (mode == null) {
+            log.warn("No getrangemode property is chosen, use default value: list to proceed");
+            return "list";
+        }
+        else if (mode.equalsIgnoreCase("iterator")){
+            log.info("getrangemode property is chosen as: iterator");
+            return "iterator";
+        }
+        else if (mode.equalsIgnoreCase("list")){
+            log.info("getrangemode property is chosen as: list");
+            return "list";
+        }
+        else {
+            log.warn("getrange mode property chosen: " +  mode + " does not match supported modes: iterator or list, choose default value: list to proceed");
+            return "list";
+        }
+    }
+
     public ModifiableConfiguration getFoundationDBConfiguration(final String graphName) {
-        return buildGraphConfiguration()
+        ModifiableConfiguration config = buildGraphConfiguration()
             .set(STORAGE_BACKEND,"org.janusgraph.diskstorage.foundationdb.FoundationDBStoreManager")
             .set(DIRECTORY, graphName)
             .set(DROP_ON_CLEAR, false)
             .set(CLUSTER_FILE_PATH, "target/test-classes/fdb/fdb.cluster")
-            .set(ISOLATION_LEVEL, "read_committed_with_write");
+            .set(ISOLATION_LEVEL, "read_committed_with_write")
+            .set(GET_RANGE_MODE, getAndCheckRangeModeFromTestEnvironment())
+            .set(VERSION, 620);
+
+        return config;
     }
 
     public WriteConfiguration getFoundationDBGraphConfiguration() {

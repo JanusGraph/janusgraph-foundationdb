@@ -61,5 +61,13 @@ public interface FoundationDBConfigOptions {
         ConfigOption.Type.LOCAL,
         "serializable");
 
+    ConfigOption<String> GET_RANGE_MODE = new ConfigOption<>(
+            FDB_NS,
+            "get-range-mode",
+            "The mod of executing FDB getRange, either `iterator` or `list`",
+            ConfigOption.Type.LOCAL,
+            "list"
+    );
+
 
 }

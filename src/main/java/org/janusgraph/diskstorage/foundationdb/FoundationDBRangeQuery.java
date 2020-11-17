@@ -16,7 +16,6 @@ package org.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.KeySelector;
 import com.apple.foundationdb.subspace.Subspace;
-import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
 
 /**
