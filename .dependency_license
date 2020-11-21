@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-log4j.appender.A1=org.apache.log4j.FileAppender
-log4j.appender.A1.File=${project.build.directory}/test.log
-log4j.appender.A1.Threshold=ALL
-log4j.appender.A1.layout=org.apache.log4j.PatternLayout
-log4j.appender.A1.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} [%20.20t] %-5p %30.30c: %m%n
-
-log4j.appender.A2=org.apache.log4j.ConsoleAppender
-log4j.appender.A2.Threshold=ALL
-log4j.appender.A2.layout=org.apache.log4j.PatternLayout
-log4j.appender.A2.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} [%20.20t] %-5p %30.30c: %m%n
-
-log4j.rootLogger=INFO, A1, A2
+\.gitignore, Apache-2.0
+README.md, Apache-2.0
+DCO.txt, Apache-2.0
+pom.xml, Apache-2.0
+src/assembly/dep.xml, Apache-2.0
+src/test/resources/fdb/empty, Apache-2.0
+CC-BY-4.0.txt, Apache-2.0
