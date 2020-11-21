@@ -1,10 +1,10 @@
 # FoundationDB Storage Adapter for JanusGraph
 
 [![Downloads][downloads-shield]][downloads-link]
-[![Build Status][travis-shield]][travis-link]
+[![Build Status][actions-shield]][actions-link]
 
-[travis-shield]: https://travis-ci.org/JanusGraph/janusgraph-foundationdb.svg?branch=master
-[travis-link]: https://travis-ci.org/JanusGraph/janusgraph-foundationdb
+[actions-shield]: https://img.shields.io/github/workflow/status/JanusGraph/janusgraph-foundationdb/TESTS
+[actions-link]: https://github.com/JanusGraph/janusgraph-foundationdb/actions
 [downloads-shield]: https://img.shields.io/github/downloads/JanusGraph/janusgraph-foundationdb/total.svg
 [downloads-link]: https://github.com/JanusGraph/janusgraph-foundationdb/releases
 
