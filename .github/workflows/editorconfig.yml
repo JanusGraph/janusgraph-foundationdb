@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+name: Editorconfig
 
-log4j.appender.A1=org.apache.log4j.FileAppender
-log4j.appender.A1.File=${project.build.directory}/test.log
-log4j.appender.A1.Threshold=ALL
-log4j.appender.A1.layout=org.apache.log4j.PatternLayout
-log4j.appender.A1.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} [%20.20t] %-5p %30.30c: %m%n
+on:
+  pull_request: {}
 
-log4j.appender.A2=org.apache.log4j.ConsoleAppender
-log4j.appender.A2.Threshold=ALL
-log4j.appender.A2.layout=org.apache.log4j.PatternLayout
-log4j.appender.A2.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} [%20.20t] %-5p %30.30c: %m%n
-
-log4j.rootLogger=INFO, A1, A2
+jobs:
+  check:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Run editorconfig
+      uses: docker://mstruebing/editorconfig-checker

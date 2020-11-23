@@ -12,16 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+root = true
 
-log4j.appender.A1=org.apache.log4j.FileAppender
-log4j.appender.A1.File=${project.build.directory}/test.log
-log4j.appender.A1.Threshold=ALL
-log4j.appender.A1.layout=org.apache.log4j.PatternLayout
-log4j.appender.A1.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} [%20.20t] %-5p %30.30c: %m%n
+[*]
+charset = utf-8
+indent_style = space
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
 
-log4j.appender.A2=org.apache.log4j.ConsoleAppender
-log4j.appender.A2.Threshold=ALL
-log4j.appender.A2.layout=org.apache.log4j.PatternLayout
-log4j.appender.A2.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} [%20.20t] %-5p %30.30c: %m%n
+[*.java]
+indent_size = 4
 
-log4j.rootLogger=INFO, A1, A2
+[*.xml]
+indent_size = 4
+insert_final_newline = false
+
+[*.sh]
+indent_size = 4
+
+[*.{yml,yaml}]
+indent_size = 2

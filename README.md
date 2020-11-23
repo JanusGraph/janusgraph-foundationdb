@@ -1,10 +1,10 @@
 # FoundationDB Storage Adapter for JanusGraph
 
 [![Downloads][downloads-shield]][downloads-link]
-[![Build Status][travis-shield]][travis-link]
+[![Build Status][actions-shield]][actions-link]
 
-[travis-shield]: https://travis-ci.org/JanusGraph/janusgraph-foundationdb.svg?branch=master
-[travis-link]: https://travis-ci.org/JanusGraph/janusgraph-foundationdb
+[actions-shield]: https://img.shields.io/github/workflow/status/JanusGraph/janusgraph-foundationdb/TESTS
+[actions-link]: https://github.com/JanusGraph/janusgraph-foundationdb/actions
 [downloads-shield]: https://img.shields.io/github/downloads/JanusGraph/janusgraph-foundationdb/total.svg
 [downloads-link]: https://github.com/JanusGraph/janusgraph-foundationdb/releases
 
@@ -71,4 +71,4 @@ FoundationDB provides serializable isolation under a specific set of [constraint
 ## GetRange Modes
 FoundationDB provides asynchronous iterator for [range query](https://apple.github.io/foundationdb/developer-guide.html#range-reads), with the following advantages compared to synchronous iterator: on-demand data stream pulling, better memory efficiency, and better thread parallelism management to support MultiQuery in JanusGraph. When the `get-range-mode` is chosen with option of `iterator`, asynchronous iterator is turned on. The default option of `get-range-mode` is `list` currently, with which synchronous iterator is chosen.
 
-The `get-range-mode` and the isolation level can be chosen independently in the storage plugin's configuration options. 
+The `get-range-mode` and the isolation level can be chosen independently in the storage plugin's configuration options.
