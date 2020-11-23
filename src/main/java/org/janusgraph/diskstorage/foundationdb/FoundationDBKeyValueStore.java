@@ -59,7 +59,7 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
         isOpen = true;
     }
 
-     @Override
+    @Override
     public String getName() {
         return name;
     }
@@ -164,8 +164,8 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
 
             return new FoundationDBRecordAsyncIterator(db, tx, rangeQuery, result, query.getKeySelector());
         } catch (Exception e) {
-           log.error("getSliceAsync db=%s, tx=%s with exception", name, txh, e);
-           throw new PermanentBackendException(e);
+            log.error("getSliceAsync db=%s, tx=%s with exception", name, txh, e);
+            throw new PermanentBackendException(e);
         }
     }
 

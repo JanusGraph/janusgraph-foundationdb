@@ -1,3 +1,17 @@
+// Copyright 2020 JanusGraph Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package org.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.Database;
@@ -43,7 +57,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
     private int maxRuns = 1;
 
-    public enum IsolationLevel { SERIALIZABLE, READ_COMMITTED_NO_WRITE, READ_COMMITTED_WITH_WRITE }
+    public enum IsolationLevel {SERIALIZABLE, READ_COMMITTED_NO_WRITE, READ_COMMITTED_WITH_WRITE}
 
     private final IsolationLevel isolationLevel;
 
@@ -89,10 +103,9 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                     log.error("Exception when closing transaction: ", e);
                 }
             }
-        }
-        else {
+        } else {
             log.warn("In execution mode: {} and when restart transaction, encountered FDB transaction object being null",
-                        isolationLevel.name());
+                isolationLevel.name());
         }
 
         tx = db.createTransaction();
@@ -127,7 +140,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 } catch (Exception e) {
                     log.error("Exception when closing transaction:", e);
                 }
-               tx = null;
+                tx = null;
             }
         }
 
@@ -140,9 +153,9 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             FDBException fe = (FDBException) t;
             if (log.isDebugEnabled()) {
                 log.debug("Catch FDBException code= {}, isRetryable={}, isMaybeCommitted={}, "
-                                + "isRetryableNotCommitted={}, isSuccess={}",
-                        fe.getCode(), fe.isRetryable(),
-                        fe.isMaybeCommitted(), fe.isRetryableNotCommitted(), fe.isSuccess());
+                        + "isRetryableNotCommitted={}, isSuccess={}",
+                    fe.getCode(), fe.isRetryable(),
+                    fe.isMaybeCommitted(), fe.isRetryableNotCommitted(), fe.isSuccess());
             }
         }
     }
@@ -178,24 +191,24 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                     try {
                         tx.close();
                     } catch (Exception ex) {
-                        log.error( "Exception when closing transaction: {} ", ex.getMessage());
+                        log.error("Exception when closing transaction: {} ", ex.getMessage());
                     }
                     tx = null;
                 }
 
-                log.error ("Commit encountered exception: {}, i: {}, maxRuns: {}, to be restarted with inserts: {} and deletes: {}",
-                           e.getMessage(), i, maxRuns, inserts.size(), deletions.size());
+                log.error("Commit encountered exception: {}, i: {}, maxRuns: {}, to be restarted with inserts: {} and deletes: {}",
+                    e.getMessage(), i, maxRuns, inserts.size(), deletions.size());
 
                 logFDBException(e.getCause());
                 if (isolationLevel.equals(IsolationLevel.SERIALIZABLE) ||
-                        isolationLevel.equals(IsolationLevel.READ_COMMITTED_NO_WRITE)) {
-                    log.error ("Commit failed with inserts: {}, deletes: {}", inserts.size(), deletions.size());
+                    isolationLevel.equals(IsolationLevel.READ_COMMITTED_NO_WRITE)) {
+                    log.error("Commit failed with inserts: {}, deletes: {}", inserts.size(), deletions.size());
 
                     // throw the exception that carries the root exception cause
                     throw new PermanentBackendException("transaction fails to commit", e);
                 }
 
-                if (i+1 != maxRuns) {
+                if (i + 1 != maxRuns) {
                     restart();
                     counter++; // increase how many times that the commit has been re-started.
                 }
@@ -206,7 +219,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                     try {
                         tx.close();
                     } catch (Exception ex) {
-                        log.error ("Exception when closing transaction: {}", ex.getMessage());
+                        log.error("Exception when closing transaction: {}", ex.getMessage());
                     }
                     tx = null;
                 }
@@ -218,7 +231,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
         if (failing) {
             log.error("Commit failed with maxRuns: {}, inserts: {}, deletes: {}, total re-starts: {}",
-                      maxRuns, inserts.size(), deletions.size(), counter);
+                maxRuns, inserts.size(), deletions.size(), counter);
 
             // Note: even if the commit is retriable and the TemporaryBackendException is thrown here, at the commit(.)
             // method of StandardJanusGraph class, the thrown exception will be translated to rollback(.) and then
@@ -255,19 +268,19 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 log.error("get encountered ExecutionException: {}, with number of retries: {}", e.getMessage(), i);
 
                 logFDBException(e.getCause());
-                if (i+1 != maxRuns) {
+                if (i + 1 != maxRuns) {
                     this.restart();
                 } else {
-                    throw new PermanentBackendException ("Max transaction reset count exceeded with final exception", e);
+                    throw new PermanentBackendException("Max transaction reset count exceeded with final exception", e);
                 }
             } catch (Exception e) {
-                log.error( "get encountered other exception: {}, with number of retries: {} ", e.getMessage(), i);
+                log.error("get encountered other exception: {}, with number of retries: {} ", e.getMessage(), i);
 
                 throw new PermanentBackendException(e);
             }
         }
 
-        throw new PermanentBackendException ("Max transaction reset count exceeded");
+        throw new PermanentBackendException("Max transaction reset count exceeded");
     }
 
 
@@ -276,7 +289,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             final int startTxId = txCtr.get();
             try {
                 List<KeyValue> result =
-                        tx.getRange(query.getStartKeySelector(), query.getEndKeySelector(), query.getLimit()).asList().get();
+                    tx.getRange(query.getStartKeySelector(), query.getEndKeySelector(), query.getLimit()).asList().get();
                 return result != null ? result : Collections.emptyList();
             } catch (ExecutionException e) {
                 log.error("getRange encountered ExecutionException: {}, with number of retries: {}", e.getMessage(), i);
@@ -285,17 +298,16 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
                 if (txCtr.get() == startTxId) {
                     log.debug("getRange tx-counter: {} and start tx-id: {} agree with each other, with exception: {} before restart",
-                                 txCtr.get(), startTxId, e.getMessage());
+                        txCtr.get(), startTxId, e.getMessage());
 
-                    if (i+1 != maxRuns) {
+                    if (i + 1 != maxRuns) {
                         this.restart();
                         log.debug("Transaction restarted with iteration: {} and maxRuns: {} ", i, maxRuns);
                     } else {
                         throw new PermanentBackendException("Max transaction reset count exceeded with final exception", e);
                     }
-                }
-                else {
-                   log.debug("getRange tx-counter: {} and start tx-id: {} not agree with each other", txCtr.get(), startTxId);
+                } else {
+                    log.debug("getRange tx-counter: {} and start tx-id: {} not agree with each other", txCtr.get(), startTxId);
                 }
             } catch (Exception e) {
                 log.error("getRange encountered other exception: {}, with number of retries: {}", e.getMessage(), i);
@@ -304,14 +316,14 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             }
         }
 
-        throw new PermanentBackendException ("Max transaction reset count exceeded");
+        throw new PermanentBackendException("Max transaction reset count exceeded");
 
     }
 
     public AsyncIterator<KeyValue> getRangeIter(FoundationDBRangeQuery query) {
         final int limit = query.asKVQuery().getLimit();
         return tx.getRange(query.getStartKeySelector(), query.getEndKeySelector(), limit,
-                false, StreamingMode.WANT_ALL).iterator();
+            false, StreamingMode.WANT_ALL).iterator();
     }
 
     public AsyncIterator<KeyValue> getRangeIter(FoundationDBRangeQuery query, final int skip) {
@@ -320,11 +332,11 @@ public class FoundationDBTx extends AbstractStoreTransaction {
         final int limit = query.asKVQuery().getLimit();
         KeySelector begin = query.getStartKeySelector().add(skip);
         KeySelector end = query.getEndKeySelector();
-        return tx.getRange(begin, end, limit-skip, false, StreamingMode.WANT_ALL).iterator();
+        return tx.getRange(begin, end, limit - skip, false, StreamingMode.WANT_ALL).iterator();
     }
 
     public synchronized Map<KVQuery, List<KeyValue>> getMultiRange(final Collection<FoundationDBRangeQuery> queries)
-            throws PermanentBackendException {
+        throws PermanentBackendException {
         Map<KVQuery, List<KeyValue>> resultMap = new ConcurrentHashMap<>();
         final List<FoundationDBRangeQuery> retries = new CopyOnWriteArrayList<>(queries);
 
@@ -334,7 +346,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
             if (retries.size() > 0) {
 
-                List<FoundationDBRangeQuery> immutableRetries = new ArrayList<> (retries);
+                List<FoundationDBRangeQuery> immutableRetries = new ArrayList<>(retries);
 
                 final List<CompletableFuture<List<KeyValue>>> futures = new LinkedList<>();
 
@@ -346,38 +358,38 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                     final KVQuery query = q.asKVQuery();
 
                     CompletableFuture<List<KeyValue>> f = tx.getRange(q.getStartKeySelector(),
-                            q.getEndKeySelector(), query.getLimit()).asList()
-                            .whenComplete((res, th) -> {
-                                if (th == null) {
-                                    log.debug("(before) get range succeeded with current size of retries: {}, thread id: {}, tx id: {}",
-                                              retries.size(), Thread.currentThread().getId(), transactionId);
+                        q.getEndKeySelector(), query.getLimit()).asList()
+                        .whenComplete((res, th) -> {
+                            if (th == null) {
+                                log.debug("(before) get range succeeded with current size of retries: {}, thread id: {}, tx id: {}",
+                                    retries.size(), Thread.currentThread().getId(), transactionId);
 
-                                    // retries's object type is: Object[], not KVQuery.
-                                    retries.remove(q);
+                                // retries's object type is: Object[], not KVQuery.
+                                retries.remove(q);
 
-                                    log.debug("(after) get range succeeded with current size of retries: {}, thread id: {}, tx id: {}",
-                                            retries.size(), Thread.currentThread().getId(), transactionId);
+                                log.debug("(after) get range succeeded with current size of retries: {}, thread id: {}, tx id: {}",
+                                    retries.size(), Thread.currentThread().getId(), transactionId);
 
-                                    if (res == null) {
-                                        res = Collections.emptyList();
-                                    }
-                                    resultMap.put(query, res);
-
-                                } else {
-                                    logFDBException(th.getCause());
-
-                                    // The restart here will bring the code into deadlock, as restart() is a
-                                    // synchronized method and the thread to invoke this method is from a worker thread
-                                    // that serves the completable future call, which is different from the thread that
-                                    // invokes the getMultiRange call (this method) and getMultiRange is also a synchronized
-                                    // call.
-                                    // if (startTxId == txCtr.get())
-                                    //    this.restart();
-                                    resultMap.put(query, Collections.emptyList());
-
-                                    log.debug("Encountered exception with: {}", th.getCause().getMessage());
+                                if (res == null) {
+                                    res = Collections.emptyList();
                                 }
-                            });
+                                resultMap.put(query, res);
+
+                            } else {
+                                logFDBException(th.getCause());
+
+                                // The restart here will bring the code into deadlock, as restart() is a
+                                // synchronized method and the thread to invoke this method is from a worker thread
+                                // that serves the completable future call, which is different from the thread that
+                                // invokes the getMultiRange call (this method) and getMultiRange is also a synchronized
+                                // call.
+                                // if (startTxId == txCtr.get())
+                                //    this.restart();
+                                resultMap.put(query, Collections.emptyList());
+
+                                log.debug("Encountered exception with: {}", th.getCause().getMessage());
+                            }
+                        });
 
                     futures.add(f);
                 }
@@ -392,24 +404,24 @@ public class FoundationDBTx extends AbstractStoreTransaction {
                 }
 
                 log.debug("get range succeeded with current size of retries: {}, thread id: {}, tx id: {}",
-                           retries.size(), Thread.currentThread().getId(), transactionId);
+                    retries.size(), Thread.currentThread().getId(), transactionId);
 
                 if (retries.size() > 0) {
                     log.debug("In multi-range query, retries size: {}, thread id: {}, tx id: {}, start tx id: {}, txCtr id: {}",
-                              retries.size(), Thread.currentThread().getId(), transactionId, startTxId, txCtr.get());
+                        retries.size(), Thread.currentThread().getId(), transactionId, startTxId, txCtr.get());
 
                     if (startTxId == txCtr.get()) {
                         log.debug("In multi-range query, to restart with thread id: {}, tx id: {}",
-                                  Thread.currentThread().getId(), transactionId);
+                            Thread.currentThread().getId(), transactionId);
 
-                        if (i+1 != maxRuns) {
+                        if (i + 1 != maxRuns) {
                             this.restart();
                         }
                     }
                 }
             } else {
                 log.debug("Finish multi-range query's all of future-based invocations with size: {}, thread id: {}, tx id: {}, number of retries:{}",
-                           queries.size(), Thread.currentThread().getId(), transactionId, (counter - 1));
+                    queries.size(), Thread.currentThread().getId(), transactionId, (counter - 1));
                 break;
             }
 
@@ -417,7 +429,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
         if (retries.size() > 0) {
             log.error("After max number of retries: {}, some range queries still failed and forced with empty returns with transaction id: {}",
-                      maxRuns, transactionId);
+                maxRuns, transactionId);
             throw new PermanentBackendException("Encounter exceptions when invoking getRange(.) calls in getMultiRange(.)");
         }
 
@@ -445,8 +457,12 @@ public class FoundationDBTx extends AbstractStoreTransaction {
             this.value = value;
         }
 
-        public byte[] getKey() { return this.key; }
+        public byte[] getKey() {
+            return this.key;
+        }
 
-        public byte[] getValue() { return this.value; }
+        public byte[] getValue() {
+            return this.value;
+        }
     }
 }

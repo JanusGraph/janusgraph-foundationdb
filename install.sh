@@ -26,8 +26,8 @@ JANUS_CONF_PATH=${JANUS_INSTALL_PATH}/conf
 JANUS_GREMLIN_SERVER_CONF=${JANUS_CONF_PATH}/gremlin-server
 
 if [ ! -d "$JANUS_INSTALL_PATH" ]; then
-  echo "Directory ${JANUS_INSTALL_PATH} does not exist"
-  exit 0
+    echo "Directory ${JANUS_INSTALL_PATH} does not exist"
+    exit 0
 fi
 
 cp lib/* ${JANUS_INSTALL_PATH}/ext

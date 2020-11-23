@@ -34,12 +34,13 @@ public class FoundationDBRecordAsyncIterator extends FoundationDBRecordIterator 
 
     protected static final int TRANSACTION_TOO_OLD_CODE = 1007;
 
-    public FoundationDBRecordAsyncIterator(Subspace ds,
-                                              FoundationDBTx tx,
-                                              FoundationDBRangeQuery query,
-                                              final AsyncIterator<KeyValue> result,
-                                              KeySelector selector) {
-        super (ds, result, selector);
+    public FoundationDBRecordAsyncIterator(
+        Subspace ds,
+        FoundationDBTx tx,
+        FoundationDBRangeQuery query,
+        final AsyncIterator<KeyValue> result,
+        KeySelector selector) {
+        super(ds, result, selector);
 
         this.tx = tx;
         this.rangeQuery = query;
@@ -48,7 +49,7 @@ public class FoundationDBRecordAsyncIterator extends FoundationDBRecordIterator 
 
     private FDBException unwrapException(Throwable err) {
         Throwable curr = err;
-        while (curr != null && !(curr instanceof FDBException))  {
+        while (curr != null && !(curr instanceof FDBException)) {
             curr = curr.getCause();
         }
         if (curr != null) {
@@ -62,8 +63,8 @@ public class FoundationDBRecordAsyncIterator extends FoundationDBRecordIterator 
     protected void fetchNext() {
         while (true) {
             try {
-               super.fetchNext();
-               break;
+                super.fetchNext();
+                break;
             } catch (RuntimeException e) {
 
                 log.info("current async iterator canceled and current transaction could be re-started when conditions meet");
@@ -73,7 +74,7 @@ public class FoundationDBRecordAsyncIterator extends FoundationDBRecordIterator 
                 FDBException fdbException = unwrapException(t);
                 // Capture the transaction too old error
                 if (tx.getIsolationLevel() != FoundationDBTx.IsolationLevel.SERIALIZABLE &&
-                        fdbException != null && (fdbException.getCode() == TRANSACTION_TOO_OLD_CODE)) {
+                    fdbException != null && (fdbException.getCode() == TRANSACTION_TOO_OLD_CODE)) {
                     tx.restart();
                     heldEntries = tx.getRangeIter(rangeQuery, fetched);
                     // Initiate record iterator again, but keep cursor "fetched" not changed.
@@ -83,8 +84,7 @@ public class FoundationDBRecordAsyncIterator extends FoundationDBRecordIterator 
                     log.error("The throwable is not restartable", t);
                     throw e;
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("AsyncIterator fetchNext() encountered exception", e);
                 throw e;
             }
