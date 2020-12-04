@@ -16,6 +16,8 @@ package org.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.KeySelector;
 import com.apple.foundationdb.subspace.Subspace;
+
+import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
 
 /**
@@ -32,8 +34,13 @@ public class FoundationDBRangeQuery {
         originalQuery = kvQuery;
         limit = kvQuery.getLimit();
 
-        byte[] startKey = db.pack(kvQuery.getStart().as(FoundationDBKeyValueStore.ENTRY_FACTORY));
-        byte[] endKey = db.pack(kvQuery.getEnd().as(FoundationDBKeyValueStore.ENTRY_FACTORY));
+        final StaticBuffer keyStart = kvQuery.getStart();
+        final StaticBuffer keyEnd = kvQuery.getEnd();
+
+        byte[] startKey = (keyStart == null) ?
+                db.range().begin : db.pack(keyStart.as(FoundationDBKeyValueStore.ENTRY_FACTORY));
+        byte[] endKey = (keyEnd == null) ?
+                db.range().end : db.pack(keyEnd.as(FoundationDBKeyValueStore.ENTRY_FACTORY));
 
         startKeySelector = KeySelector.firstGreaterOrEqual(startKey);
         endKeySelector = KeySelector.firstGreaterOrEqual(endKey);
