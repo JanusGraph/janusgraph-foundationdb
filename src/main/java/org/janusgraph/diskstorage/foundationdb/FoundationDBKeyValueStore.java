@@ -15,6 +15,8 @@
 package org.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.KeyValue;
+import com.apple.foundationdb.LocalityUtil;
+import com.apple.foundationdb.async.CloseableAsyncIterator;
 import com.apple.foundationdb.async.AsyncIterator;
 import com.apple.foundationdb.directory.DirectorySubspace;
 import com.google.common.base.Preconditions;
@@ -30,6 +32,7 @@ import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -37,7 +40,7 @@ import java.util.HashMap;
 /**
  * @author Ted Wilmes (twilmes@gmail.com)
  */
-public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
+public class FoundationDBKeyValueStore implements OrderedKeyValueStore, AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(FoundationDBKeyValueStore.class);
 
@@ -253,6 +256,13 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore {
             log.error("db={}, op=delete, tx={} with exception", name, txh, e);
             throw new PermanentBackendException(e);
         }
+    }
+    public List<StaticBuffer> getBoundaryKeys() {
+        List<StaticBuffer> keys = new ArrayList<>();
+        try (CloseableAsyncIterator<byte[]> it = LocalityUtil.getBoundaryKeys(manager.db, db.range().begin, db.range().end)) {
+            it.forEachRemaining(key -> keys.add(getBuffer(db.unpack(key).getBytes(0))));
+        }
+        return keys;
     }
 
     static StaticBuffer getBuffer(byte[] entry) {

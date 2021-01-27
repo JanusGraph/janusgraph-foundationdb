@@ -56,7 +56,7 @@ import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.GR
  *
  * @author Ted Wilmes (twilmes@gmail.com)
  */
-public class FoundationDBStoreManager extends AbstractStoreManager implements OrderedKeyValueStoreManager {
+public class FoundationDBStoreManager extends AbstractStoreManager implements OrderedKeyValueStoreManager, AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(FoundationDBStoreManager.class);
 
