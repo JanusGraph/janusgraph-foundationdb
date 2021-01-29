@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -260,7 +261,12 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore, AutoClos
     public List<StaticBuffer> getBoundaryKeys() {
         List<StaticBuffer> keys = new ArrayList<>();
         try (CloseableAsyncIterator<byte[]> it = LocalityUtil.getBoundaryKeys(manager.db, db.range().begin, db.range().end)) {
-            it.forEachRemaining(key -> keys.add(getBuffer(db.unpack(key).getBytes(0))));
+            it.forEachRemaining(key -> {
+                if (key[key.length - 1] != 0x00) {
+                    key = Arrays.copyOf(key, key.length + 1);
+                }
+                keys.add(getBuffer(db.unpack(key).getBytes(0)))
+            });
         }
         return keys;
     }
