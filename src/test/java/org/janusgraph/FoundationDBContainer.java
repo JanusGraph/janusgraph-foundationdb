@@ -40,7 +40,7 @@ public class FoundationDBContainer extends FixedHostPortGenericContainer<Foundat
 
     private final Logger log = LoggerFactory.getLogger(FoundationDBContainer.class);
 
-    public static final String DEFAULT_IMAGE_AND_TAG = "foundationdb/foundationdb:6.2.20";
+    public static final String DEFAULT_IMAGE_AND_TAG = "foundationdb/foundationdb:6.2.30";
     private static final Integer DEFAULT_PORT = 4500;
     private static final String FDB_CLUSTER_FILE_ENV_KEY = "FDB_CLUSTER_FILE";
     private static final String FDB_NETWORKING_MODE_ENV_KEY = "FDB_NETWORKING_MODE";
