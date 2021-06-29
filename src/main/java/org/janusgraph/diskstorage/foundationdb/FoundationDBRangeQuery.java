@@ -25,10 +25,10 @@ import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KVQuery;
  */
 public class FoundationDBRangeQuery {
 
-    private KVQuery originalQuery;
+    private final KVQuery originalQuery;
     private KeySelector startKeySelector;
     private KeySelector endKeySelector;
-    private int limit;
+    private final int limit;
 
     public FoundationDBRangeQuery(Subspace db, KVQuery kvQuery) {
         originalQuery = kvQuery;

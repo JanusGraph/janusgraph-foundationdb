@@ -16,8 +16,8 @@ package org.janusgraph.diskstorage.foundationdb;
 
 import com.apple.foundationdb.KeyValue;
 import com.apple.foundationdb.LocalityUtil;
-import com.apple.foundationdb.async.CloseableAsyncIterator;
 import com.apple.foundationdb.async.AsyncIterator;
+import com.apple.foundationdb.async.CloseableAsyncIterator;
 import com.apple.foundationdb.directory.DirectorySubspace;
 import com.google.common.base.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
@@ -75,11 +75,6 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore, AutoClos
 
     @Override
     public synchronized void close() throws BackendException {
-        try {
-            //if(isOpen) db.close();
-        } catch (Exception e) {
-            throw new PermanentBackendException(e);
-        }
         if (isOpen) manager.removeDatabase(this);
         isOpen = false;
     }
@@ -168,7 +163,7 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore, AutoClos
 
             return new FoundationDBRecordAsyncIterator(db, tx, rangeQuery, result, query.getKeySelector());
         } catch (Exception e) {
-            log.error("getSliceAsync db=%s, tx=%s with exception", name, txh, e);
+            log.error("getSliceAsync db={}, tx={} with exception", name, txh, e);
             throw new PermanentBackendException(e);
         }
     }
@@ -259,6 +254,9 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore, AutoClos
         }
     }
 
+    /* this method is not called within JanusGraph, it's used for bulk access in Spark jobs.
+    For more: Please check: {@link https://github.com/JanusGraph/janusgraph-foundationdb/pull/48#discussion_r498917927}
+     */
     public List<StaticBuffer> getBoundaryKeys() {
         List<StaticBuffer> keys = new ArrayList<>();
         try (CloseableAsyncIterator<byte[]> it = LocalityUtil.getBoundaryKeys(manager.db, db.range().begin, db.range().end)) {
@@ -275,4 +273,6 @@ public class FoundationDBKeyValueStore implements OrderedKeyValueStore, AutoClos
     static StaticBuffer getBuffer(byte[] entry) {
         return new StaticArrayBuffer(entry);
     }
+
+
 }
