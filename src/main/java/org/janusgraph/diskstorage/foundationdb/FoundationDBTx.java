@@ -52,8 +52,8 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
     private final Database db;
 
-    private List<Insert> inserts = Collections.synchronizedList(new ArrayList<>());
-    private List<byte[]> deletions = Collections.synchronizedList(new ArrayList<>());
+    private final List<Insert> inserts = Collections.synchronizedList(new ArrayList<>());
+    private final List<byte[]> deletions = Collections.synchronizedList(new ArrayList<>());
 
     private int maxRuns = 1;
 
@@ -61,10 +61,10 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
     private final IsolationLevel isolationLevel;
 
-    private AtomicInteger txCtr = new AtomicInteger(0);
+    private final AtomicInteger txCtr = new AtomicInteger(0);
 
-    private static AtomicInteger transLocalIdCounter = new AtomicInteger(0);
-    private int transactionId = 0;
+    private static final AtomicInteger transLocalIdCounter = new AtomicInteger(0);
+    private final int transactionId;
 
     public FoundationDBTx(Database db, Transaction t, BaseTransactionConfig config, IsolationLevel isolationLevel) {
         super(config);
@@ -149,7 +149,7 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
 
     private void logFDBException(Throwable t) {
-        if (t != null && t instanceof FDBException) {
+        if (t instanceof FDBException) {
             FDBException fe = (FDBException) t;
             if (log.isDebugEnabled()) {
                 log.debug("Catch FDBException code= {}, isRetryable={}, isMaybeCommitted={}, "
@@ -449,8 +449,8 @@ public class FoundationDBTx extends AbstractStoreTransaction {
 
 
     private class Insert {
-        private byte[] key;
-        private byte[] value;
+        private final byte[] key;
+        private final byte[] value;
 
         public Insert(final byte[] key, final byte[] value) {
             this.key = key;
